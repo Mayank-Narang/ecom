@@ -17,8 +17,6 @@ export const Navbar = () => {
     { name: 'Home', href: '/', icon: Home },
     { name: 'Products', href: '/products', icon: Package },
     { name: 'Cart', href: '/cart', icon: ShoppingCart },
-    { name: 'Feedback', href: '/feedback', icon: Star },
-    { name: 'Admin', href: '/admin', icon: Sun },
   ];
 
   const NavContent = () => (

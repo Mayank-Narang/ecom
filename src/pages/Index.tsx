@@ -2,7 +2,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Link } from "react-router-dom";
-import { Sun, Leaf, Zap, ShoppingCart, Star, BarChart3, ArrowRight } from "lucide-react";
+import { Sun, Leaf, Zap, ShoppingCart, BarChart3, ArrowRight } from "lucide-react";
 
 const Index = () => {
   return (
@@ -27,19 +27,12 @@ const Index = () => {
             Shop premium solar products and share your experiences with our community.
           </p>
           
-          <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
+          <div className="flex justify-center">
             <Link to="/products">
               <Button size="lg" className="bg-primary hover:bg-primary/90 text-primary-foreground px-8 py-3">
                 <ShoppingCart className="h-5 w-5 mr-2" />
                 Shop Solar Products
                 <ArrowRight className="h-5 w-5 ml-2" />
-              </Button>
-            </Link>
-            
-            <Link to="/feedback">
-              <Button variant="outline" size="lg" className="px-8 py-3">
-                <Star className="h-5 w-5 mr-2" />
-                Share Feedback
               </Button>
             </Link>
           </div>
