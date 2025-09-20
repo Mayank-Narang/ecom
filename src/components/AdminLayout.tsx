@@ -1,6 +1,6 @@
 import { Link, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
-import { LogOut, Package, Plus, List } from 'lucide-react';
+import { LogOut, Package, Plus, List, Star } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 
 export const AdminLayout = () => {
@@ -14,6 +14,12 @@ export const AdminLayout = () => {
       items: [
         { name: 'Add New Product', href: '/admin/products/add', icon: Plus },
         { name: 'My Products', href: '/admin/products', icon: List },
+      ]
+    },
+    {
+      section: 'Reviews',
+      items: [
+        { name: 'Product Reviews', href: '/admin/reviews', icon: Star },
       ]
     }
   ];

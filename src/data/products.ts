@@ -1,3 +1,20 @@
+export interface SentimentAnalysis {
+  score: number;
+  sentiment: 'positive' | 'negative' | 'neutral';
+  positiveWords: string[];
+  negativeWords: string[];
+}
+
+export interface Review {
+  id: string;
+  userId: string;
+  userName: string;
+  rating: number; // 1-5
+  comment: string;
+  date: string;
+  sentiment?: SentimentAnalysis; // Added sentiment analysis data
+}
+
 export interface Product {
   id: string;
   name: string;
@@ -7,7 +24,8 @@ export interface Product {
   category: string;
   stock?: number;
   isActive?: boolean;
-  rating?: number;
+  rating?: number; // Average rating
+  reviews?: Review[];
 }
 
 export const solarProducts: Product[] = [
