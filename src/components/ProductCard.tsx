@@ -6,6 +6,7 @@ import { useCart } from '@/contexts/CartContext';
 import { Product } from '@/data/products';
 import { ShoppingCart, Zap, ArrowRight } from 'lucide-react';
 import { Link } from 'react-router-dom';
+import { formatCurrency } from '@/utils/currency';
 
 interface ProductCardProps {
   product: Product;
@@ -57,7 +58,7 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
         <div className="w-full">
           <div className="flex items-center justify-between mb-3">
             <span className="text-base font-bold text-foreground">
-              ${product.price.toFixed(2)}
+              {formatCurrency(product.price)}
             </span>
           </div>
           <div className="grid grid-cols-2 gap-2">

@@ -2,9 +2,11 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Link } from "react-router-dom";
-import { Sun, Leaf, Zap, ShoppingCart, BarChart3, ArrowRight } from "lucide-react";
+import { Sun, Leaf, Zap, ShoppingCart, BarChart3, ArrowRight, Lock } from "lucide-react";
+import { useAuth } from "@/contexts/AuthContext";
 
 const Index = () => {
+  const { isAuthenticated } = useAuth();
   return (
     <div className="min-h-screen bg-gradient-to-br from-background via-accent/5 to-success/10">
       <section className="relative py-20 px-4 text-center">
@@ -27,13 +29,23 @@ const Index = () => {
           </p>
           
           <div className="flex justify-center">
-            <Link to="/products">
-              <Button size="lg" className="bg-primary hover:bg-primary/90 text-primary-foreground px-8 py-3">
-                <ShoppingCart className="h-5 w-5 mr-2" />
-                Shop Solar Products
-                <ArrowRight className="h-5 w-5 ml-2" />
-              </Button>
-            </Link>
+            <div className="flex flex-col sm:flex-row gap-4">
+              <Link to="/products">
+                <Button size="lg" className="bg-primary hover:bg-primary/90 text-primary-foreground px-8 py-3">
+                  <ShoppingCart className="h-5 w-5 mr-2" />
+                  Shop Solar Products
+                  <ArrowRight className="h-5 w-5 ml-2" />
+                </Button>
+              </Link>
+              {isAuthenticated && (
+                <Link to="/admin">
+                  <Button variant="outline" size="lg" className="px-8 py-3">
+                    <Lock className="h-5 w-5 mr-2" />
+                    Admin Panel
+                  </Button>
+                </Link>
+              )}
+            </div>
           </div>
         </div>
       </section>

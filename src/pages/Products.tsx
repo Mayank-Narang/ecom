@@ -1,27 +1,54 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { ProductCard } from '@/components/ProductCard';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { solarProducts } from '@/data/products';
-import { Search, Filter } from 'lucide-react';
+import { solarProducts as defaultProducts } from '@/data/products';
+import { Search, Filter, Loader2 } from 'lucide-react';
+import { formatCurrency } from '@/utils/currency';
+import { useToast } from '@/hooks/use-toast';
 
 const Products = () => {
+  const [products, setProducts] = useState(defaultProducts);
+  const [isLoading, setIsLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('All');
   const [sortBy, setSortBy] = useState('name');
+  const { toast } = useToast();
+
+  // Load products from localStorage on component mount
+  useEffect(() => {
+    try {
+      const savedProducts = localStorage.getItem('products');
+      if (savedProducts) {
+        const parsedProducts = JSON.parse(savedProducts);
+        if (Array.isArray(parsedProducts) && parsedProducts.length > 0) {
+          setProducts(parsedProducts);
+        }
+      }
+    } catch (error) {
+      console.error('Error loading products:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to load products',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  }, []);
 
   // Get unique categories
-  const categories = ['All', ...Array.from(new Set(solarProducts.map(p => p.category)))];
+  const categories = ['All', ...Array.from(new Set(products.map(p => p.category)))];
 
   // Filter and sort products
-  const filteredProducts = solarProducts
+  const filteredProducts = products
     .filter(product => {
       const matchesSearch = product.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
                           product.description.toLowerCase().includes(searchTerm.toLowerCase());
       const matchesCategory = selectedCategory === 'All' || product.category === selectedCategory;
-      return matchesSearch && matchesCategory;
+      return matchesSearch && matchesCategory && product.isActive !== false;
     })
     .sort((a, b) => {
       switch (sortBy) {
@@ -34,6 +61,14 @@ const Products = () => {
           return a.name.localeCompare(b.name);
       }
     });
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center min-h-[60vh]">
+        <Loader2 className="h-8 w-8 animate-spin" />
+      </div>
+    );
+  }
 
   return (
     <div className="container mx-auto px-4 py-8">
@@ -97,8 +132,8 @@ const Products = () => {
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="name">Name A-Z</SelectItem>
-                <SelectItem value="price-low">Price: Low to High</SelectItem>
-                <SelectItem value="price-high">Price: High to Low</SelectItem>
+                <SelectItem value="price-low">Price: Low to High (₹)</SelectItem>
+                <SelectItem value="price-high">Price: High to Low (₹)</SelectItem>
               </SelectContent>
             </Select>
           </div>

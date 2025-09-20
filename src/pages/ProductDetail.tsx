@@ -1,16 +1,60 @@
+import { useState, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
 import { Button } from "@/components/ui/button";
 import { useCart } from "@/contexts/CartContext";
-import { Star, ShoppingCart, ArrowLeft } from "lucide-react";
+import { Star, ShoppingCart, ArrowLeft, Loader2 } from "lucide-react";
 import { Link } from "react-router-dom";
-import { solarProducts } from "@/data/products";
+import { solarProducts as defaultProducts, Product } from "@/data/products";
+import { formatCurrency } from "@/utils/currency";
+import { useToast } from "@/hooks/use-toast";
 
 const ProductDetail = () => {
   const { id } = useParams<{ id: string }>();
   const { addToCart } = useCart();
-  
-  // Find the product with the matching ID
-  const product = solarProducts.find(p => p.id === id);
+  const [product, setProduct] = useState<Product | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const { toast } = useToast();
+
+  useEffect(() => {
+    const loadProduct = () => {
+      try {
+        // First check localStorage
+        const savedProducts = localStorage.getItem('products');
+        let productsList: Product[] = [];
+
+        if (savedProducts) {
+          productsList = JSON.parse(savedProducts);
+        } else {
+          // Fallback to default products if localStorage is empty
+          productsList = defaultProducts;
+        }
+
+        const foundProduct = productsList.find(p => p.id === id);
+        if (foundProduct) {
+          setProduct(foundProduct);
+        }
+      } catch (error) {
+        console.error('Error loading product:', error);
+        toast({
+          title: 'Error',
+          description: 'Failed to load product details',
+          variant: 'destructive',
+        });
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    loadProduct();
+  }, [id, toast]);
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center min-h-[60vh]">
+        <Loader2 className="h-8 w-8 animate-spin" />
+      </div>
+    );
+  }
 
   if (!product) {
     return (
@@ -55,7 +99,7 @@ const ProductDetail = () => {
               <span className="text-muted-foreground">(24 reviews)</span>
             </div>
             
-            <p className="text-3xl font-bold text-primary mb-6">${product.price.toFixed(2)}</p>
+            <p className="text-3xl font-bold text-primary mb-6">{formatCurrency(product.price)}</p>
             
             <p className="text-muted-foreground mb-8">{product.description}</p>
             

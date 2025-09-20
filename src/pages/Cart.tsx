@@ -9,6 +9,7 @@ import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
 import { Minus, Plus, Trash2, ShoppingBag, CreditCard } from 'lucide-react';
 import { Link } from 'react-router-dom';
+import { formatCurrency } from '@/utils/currency';
 
 const Cart = () => {
   const { items, updateQuantity, removeFromCart, clearCart, getTotalPrice } = useCart();
@@ -63,7 +64,7 @@ const Cart = () => {
 
       toast({
         title: "Order placed successfully!",
-        description: `Thank you ${customerInfo.name}! Your order total is $${getTotalPrice().toFixed(2)}`,
+        description: `Thank you ${customerInfo.name}! Your order total is ${formatCurrency(getTotalPrice())}`,
       });
       
       clearCart();
@@ -126,7 +127,7 @@ const Cart = () => {
                   
                   <div className="text-right">
                     <div className="text-lg font-bold text-primary mb-2">
-                      ${item.price.toFixed(2)}
+                      {formatCurrency(item.price)}
                     </div>
                     
                     <div className="flex items-center gap-2 mb-2">
@@ -181,11 +182,11 @@ const Cart = () => {
               <div className="mb-6 p-4 bg-muted rounded-lg">
                 <div className="flex justify-between items-center mb-2">
                   <span className="text-muted-foreground">Items ({items.length})</span>
-                  <span className="font-medium">${getTotalPrice().toFixed(2)}</span>
+                  <span className="font-medium">{formatCurrency(getTotalPrice())}</span>
                 </div>
                 <div className="flex justify-between items-center text-lg font-bold">
                   <span>Total</span>
-                  <span className="text-primary">${getTotalPrice().toFixed(2)}</span>
+                  <span className="text-lg font-bold">{formatCurrency(getTotalPrice())}</span>
                 </div>
               </div>
 
