@@ -7,7 +7,6 @@ import { Sun, Leaf, Zap, ShoppingCart, BarChart3, ArrowRight } from "lucide-reac
 const Index = () => {
   return (
     <div className="min-h-screen bg-gradient-to-br from-background via-accent/5 to-success/10">
-      {/* Hero Section */}
       <section className="relative py-20 px-4 text-center">
         <div className="max-w-4xl mx-auto">
           <div className="flex justify-center mb-6">
@@ -39,7 +38,6 @@ const Index = () => {
         </div>
       </section>
 
-      {/* Features Section */}
       <section className="py-16 px-4">
         <div className="max-w-6xl mx-auto">
           <h2 className="text-3xl font-bold text-center mb-12 text-foreground">
@@ -92,7 +90,6 @@ const Index = () => {
         </div>
       </section>
 
-      {/* CTA Section */}
       <section className="py-16 px-4 bg-primary/5">
         <div className="max-w-4xl mx-auto text-center">
           <h2 className="text-3xl font-bold mb-6 text-foreground">

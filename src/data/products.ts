@@ -1,4 +1,3 @@
-// Dummy solar products data
 export interface Product {
   id: string;
   name: string;
@@ -58,55 +57,3 @@ export const solarProducts: Product[] = [
     category: "Monitoring"
   }
 ];
-
-/*
-MongoDB Schema for Products:
-const mongoose = require('mongoose');
-
-const productSchema = new mongoose.Schema({
-  name: {
-    type: String,
-    required: true,
-    trim: true
-  },
-  price: {
-    type: Number,
-    required: true,
-    min: 0
-  },
-  description: {
-    type: String,
-    required: true
-  },
-  imageURL: {
-    type: String,
-    required: true
-  },
-  category: {
-    type: String,
-    required: true
-  },
-  stock: {
-    type: Number,
-    default: 0
-  },
-  isActive: {
-    type: Boolean,
-    default: true
-  }
-}, {
-  timestamps: true
-});
-
-module.exports = mongoose.model('Product', productSchema);
-
-// API Route: GET /api/products
-app.get('/api/products', async (req, res) => {
-  try {
-    const products = await Product.find({ isActive: true });
-    res.json(products);
-  } catch (error) {
-    res.status(500).json({ message: error.message });
-  }
-});
-*/
