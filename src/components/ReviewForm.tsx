@@ -7,13 +7,27 @@ import { analyzeSentiment, getSentimentEmoji, getSentimentColor } from '@/utils/
 
 interface ReviewFormProps {
   productId: string;
-  onReviewSubmit: () => void;
+  onReviewSubmit: (review: {
+    userId: string;
+    userName: string;
+    rating: number;
+    comment: string;
+  }) => Promise<void>;
+  userId: string;
+  userName: string;
+  onUserNameChange?: (name: string) => void;
 }
 
-export const ReviewForm = ({ productId, onReviewSubmit }: ReviewFormProps) => {
+export const ReviewForm = ({ 
+  productId, 
+  onReviewSubmit, 
+  userId, 
+  userName: propUserName, 
+  onUserNameChange 
+}: ReviewFormProps) => {
   const [rating, setRating] = useState(0);
   const [comment, setComment] = useState('');
-  const [userName, setUserName] = useState('');
+  const [userName, setUserName] = useState(propUserName || '');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [sentiment, setSentiment] = useState<{
     score: number;
@@ -55,37 +69,24 @@ export const ReviewForm = ({ productId, onReviewSubmit }: ReviewFormProps) => {
       return;
     }
 
+    if (!userName.trim()) {
+      toast({
+        title: 'Error',
+        description: 'Please enter your name',
+        variant: 'destructive',
+      });
+      return;
+    }
+
     setIsSubmitting(true);
 
     try {
-      // Get existing reviews from localStorage
-      const savedProducts = localStorage.getItem('products');
-      if (!savedProducts) throw new Error('No products found');
-      
-      const products = JSON.parse(savedProducts);
-      const productIndex = products.findIndex((p: any) => p.id === productId);
-      
-      if (productIndex === -1) throw new Error('Product not found');
-
-      if (!userName.trim()) {
-        toast({
-          title: 'Error',
-          description: 'Please enter your name',
-          variant: 'destructive',
-        });
-        return;
-      }
-
-      // Create new review
-      const newReview = {
-        id: `rev_${Date.now()}`,
-        userId: `user_${Math.random().toString(36).substr(2, 9)}`,
+      await onReviewSubmit({
+        userId,
         userName: userName.trim(),
         rating,
         comment,
-        date: new Date().toISOString(),
-        sentiment: analyzeSentiment(comment),
-      };
+      });
       
       // Show sentiment feedback to user
       toast({
@@ -94,32 +95,11 @@ export const ReviewForm = ({ productId, onReviewSubmit }: ReviewFormProps) => {
           ? `Detected keywords: ${[...(sentiment?.positiveWords || []), ...(sentiment?.negativeWords || [])].join(', ')}`
           : undefined,
       });
-
-      // Add review to product
-      const updatedProduct = {
-        ...products[productIndex],
-        reviews: [...(products[productIndex].reviews || []), newReview],
-        rating: calculateAverageRating([...(products[productIndex].reviews || []), newReview])
-      };
-
-      // Update products array
-      const updatedProducts = [...products];
-      updatedProducts[productIndex] = updatedProduct;
-
-      // Save back to localStorage
-      localStorage.setItem('products', JSON.stringify(updatedProducts));
-
-      toast({
-        title: 'Success',
-        description: 'Thank you for your review!',
-      });
-
-      // Reset form
+      
+      // Clear the form
       setRating(0);
       setComment('');
-      
-      // Notify parent component
-      onReviewSubmit();
+      setSentiment(null);
     } catch (error) {
       console.error('Error submitting review:', error);
       toast({
@@ -130,12 +110,6 @@ export const ReviewForm = ({ productId, onReviewSubmit }: ReviewFormProps) => {
     } finally {
       setIsSubmitting(false);
     }
-  };
-
-  const calculateAverageRating = (reviews: any[]) => {
-    if (!reviews.length) return 0;
-    const sum = reviews.reduce((acc, review) => acc + review.rating, 0);
-    return Math.round((sum / reviews.length) * 10) / 10; // Round to 1 decimal place
   };
 
   return (
@@ -150,11 +124,14 @@ export const ReviewForm = ({ productId, onReviewSubmit }: ReviewFormProps) => {
             type="text"
             id="userName"
             value={userName}
-            onChange={(e) => setUserName(e.target.value)}
-            className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary"
-            placeholder="Enter your name"
-            disabled={isSubmitting}
+            onChange={(e) => {
+              setUserName(e.target.value);
+              if (onUserNameChange) onUserNameChange(e.target.value);
+            }}
+            placeholder="Your name"
+            className="flex-1 min-w-0 px-3 py-2 border rounded-md shadow-sm focus:ring-primary focus:border-primary"
             required
+            disabled={!!propUserName}
           />
         </div>
         

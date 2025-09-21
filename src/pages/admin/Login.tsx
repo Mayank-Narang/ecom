@@ -9,6 +9,7 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 export const AdminLogin = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [name, setName] = useState('');
   const [error, setError] = useState('');
   const { login } = useAuth();
   const navigate = useNavigate();
@@ -20,7 +21,7 @@ export const AdminLogin = () => {
     e.preventDefault();
     setError('');
     
-    if (login(email, password)) {
+    if (login(email, password, name)) {
       navigate(from, { replace: true });
     } else {
       setError('Invalid email or password');
@@ -41,6 +42,17 @@ export const AdminLogin = () => {
                 {error}
               </div>
             )}
+            <div className="space-y-2">
+              <Label htmlFor="name">Your Name</Label>
+              <Input
+                id="name"
+                type="text"
+                placeholder="Your Name"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                required
+              />
+            </div>
             <div className="space-y-2">
               <Label htmlFor="email">Email</Label>
               <Input

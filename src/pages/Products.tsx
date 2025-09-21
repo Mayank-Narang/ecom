@@ -4,68 +4,95 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { solarProducts as defaultProducts } from '@/data/products';
 import { Search, Filter, Loader2 } from 'lucide-react';
 import { formatCurrency } from '@/utils/currency';
 import { useToast } from '@/hooks/use-toast';
+import { getProducts } from '@/services/api';
+import { Product } from '@/data/products';
 
 const Products = () => {
-  const [products, setProducts] = useState(defaultProducts);
-  const [isLoading, setIsLoading] = useState(true);
+  const [products, setProducts] = useState<Product[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('All');
   const [sortBy, setSortBy] = useState('name');
+  const [categories, setCategories] = useState<string[]>(['All']);
   const { toast } = useToast();
 
-  // Load products from localStorage on component mount
-  useEffect(() => {
+  // Fetch products with search and filter
+  const fetchProducts = async () => {
     try {
-      const savedProducts = localStorage.getItem('products');
-      if (savedProducts) {
-        const parsedProducts = JSON.parse(savedProducts);
-        if (Array.isArray(parsedProducts) && parsedProducts.length > 0) {
-          setProducts(parsedProducts);
-        }
-      }
-    } catch (error) {
-      console.error('Error loading products:', error);
+      setLoading(true);
+      setError(null);
+      
+      // Only include category in the query if it's not 'All'
+      const categoryParam = selectedCategory !== 'All' ? selectedCategory : '';
+      
+      const data = await getProducts({
+        search: searchTerm,
+        category: categoryParam
+      });
+      
+      setProducts(data);
+      
+      // Update categories list
+      const uniqueCategories = ['All', ...new Set(data.map((p: Product) => p.category))];
+      setCategories(uniqueCategories);
+    } catch (err) {
+      console.error('Error fetching products:', err);
+      setError('Failed to load products. Please try again later.');
       toast({
         title: 'Error',
         description: 'Failed to load products',
         variant: 'destructive',
       });
     } finally {
-      setIsLoading(false);
+      setLoading(false);
     }
-  }, []);
+  };
 
-  // Get unique categories
-  const categories = ['All', ...Array.from(new Set(products.map(p => p.category)))];
+  // Fetch products when search term, category, or sort changes
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      fetchProducts();
+    }, 300); // Debounce search
+    
+    return () => clearTimeout(timer);
+  }, [searchTerm, selectedCategory]);
 
-  // Filter and sort products
-  const filteredProducts = products
-    .filter(product => {
-      const matchesSearch = product.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                          product.description.toLowerCase().includes(searchTerm.toLowerCase());
-      const matchesCategory = selectedCategory === 'All' || product.category === selectedCategory;
-      return matchesSearch && matchesCategory && product.isActive !== false;
-    })
-    .sort((a, b) => {
-      switch (sortBy) {
-        case 'price-low':
-          return a.price - b.price;
-        case 'price-high':
-          return b.price - a.price;
-        case 'name':
-        default:
-          return a.name.localeCompare(b.name);
-      }
-    });
+  // Sort products
+  const sortedProducts = [...products].sort((a, b) => {
+    switch (sortBy) {
+      case 'price-low':
+        return a.price - b.price;
+      case 'price-high':
+        return b.price - a.price;
+      case 'name':
+      default:
+        return a.name.localeCompare(b.name);
+    }
+  });
 
-  if (isLoading) {
+  if (loading) {
     return (
       <div className="flex items-center justify-center min-h-[60vh]">
         <Loader2 className="h-8 w-8 animate-spin" />
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="container mx-auto px-4 py-8">
+        <div className="text-center text-red-500">
+          Error: {error}
+        </div>
+        <div className="mt-4 text-center">
+          <Button onClick={fetchProducts}>
+            Retry
+          </Button>
+        </div>
       </div>
     );
   }
@@ -141,9 +168,8 @@ const Products = () => {
 
         {/* Results Count */}
         <div className="flex items-center justify-between mt-4 pt-4 border-t border-border">
-          <Badge variant="outline" className="text-sm">
-            <Filter className="h-3 w-3 mr-1" />
-            {filteredProducts.length} products found
+          <Badge variant="outline" className="ml-2">
+            {products.length} product{products.length !== 1 ? 's' : ''} found
           </Badge>
           
           {(searchTerm || selectedCategory !== 'All') && (
@@ -162,13 +188,17 @@ const Products = () => {
       </div>
 
       {/* Products Grid */}
-      {filteredProducts.length > 0 ? (
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          {filteredProducts.map(product => (
-            <div key={product.id} className="h-full">
-              <ProductCard product={product} />
+      {sortedProducts.length > 0 ? (
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6 mt-8">
+          {sortedProducts.map((product) => {
+            const productId = product._id || product.id;
+            return <ProductCard key={productId} product={product} />;
+          })}
+          {sortedProducts.length === 0 && !loading && (
+            <div className="col-span-full text-center py-12">
+              <p className="text-muted-foreground">No products found. Try adjusting your search or filters.</p>
             </div>
-          ))}
+          )}
         </div>
       ) : (
         <div className="text-center py-12">

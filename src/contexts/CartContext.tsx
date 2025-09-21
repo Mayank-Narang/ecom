@@ -1,5 +1,15 @@
-import React, { createContext, useContext, useState, ReactNode } from 'react';
-import { Product } from '@/data/products';
+import React, { createContext, useContext, useState, ReactNode, useCallback } from 'react';
+
+export interface Product {
+  id: string;
+  name: string;
+  price: number;
+  description: string;
+  imageURL: string;
+  category: string;
+  rating?: number;
+  numReviews?: number;
+}
 
 export interface CartItem extends Product {
   quantity: number;
@@ -32,27 +42,47 @@ interface CartProviderProps {
 export const CartProvider: React.FC<CartProviderProps> = ({ children }) => {
   const [items, setItems] = useState<CartItem[]>([]);
 
-  const addToCart = (product: Product) => {
+  const addToCart = useCallback((product: Product) => {
     setItems(currentItems => {
-      const existingItem = currentItems.find(item => item.id === product.id);
+      // Handle both id and _id for product identification
+      const productId = product.id || (product as any)._id;
+      if (!productId) {
+        console.error('Product has no valid ID:', product);
+        return currentItems;
+      }
+
+      const existingItem = currentItems.find(item => 
+        item.id === productId || (item as any)._id === productId
+      );
       
       if (existingItem) {
         return currentItems.map(item =>
-          item.id === product.id
+          (item.id === productId || (item as any)._id === productId)
             ? { ...item, quantity: item.quantity + 1 }
             : item
         );
       }
       
-      return [...currentItems, { ...product, quantity: 1 }];
+      // Ensure we're using the correct ID field
+      const productToAdd = { ...product };
+      if ((product as any)._id && !product.id) {
+        productToAdd.id = (product as any)._id;
+        delete (productToAdd as any)._id;
+      }
+      
+      return [...currentItems, { ...productToAdd, quantity: 1 }];
     });
-  };
+  }, []);
 
-  const removeFromCart = (productId: string) => {
-    setItems(currentItems => currentItems.filter(item => item.id !== productId));
-  };
+  const removeFromCart = useCallback((productId: string) => {
+    setItems(currentItems => 
+      currentItems.filter(item => 
+        item.id !== productId && (item as any)._id !== productId
+      )
+    );
+  }, []);
 
-  const updateQuantity = (productId: string, quantity: number) => {
+  const updateQuantity = useCallback((productId: string, quantity: number) => {
     if (quantity <= 0) {
       removeFromCart(productId);
       return;
@@ -60,22 +90,24 @@ export const CartProvider: React.FC<CartProviderProps> = ({ children }) => {
     
     setItems(currentItems =>
       currentItems.map(item =>
-        item.id === productId ? { ...item, quantity } : item
+        (item.id === productId || (item as any)._id === productId) 
+          ? { ...item, quantity } 
+          : item
       )
     );
-  };
+  }, [removeFromCart]);
 
-  const clearCart = () => {
+  const clearCart = useCallback(() => {
     setItems([]);
-  };
+  }, []);
 
-  const getTotalPrice = () => {
+  const getTotalPrice = useCallback(() => {
     return items.reduce((total, item) => total + (item.price * item.quantity), 0);
-  };
+  }, [items]);
 
-  const getTotalItems = () => {
+  const getTotalItems = useCallback(() => {
     return items.reduce((total, item) => total + item.quantity, 0);
-  };
+  }, [items]);
 
   return (
     <CartContext.Provider
@@ -94,8 +126,8 @@ export const CartProvider: React.FC<CartProviderProps> = ({ children }) => {
   );
 };
 
+// MongoDB Schema for Orders
 /*
-MongoDB Schema for Orders:
 const mongoose = require('mongoose');
 
 const orderSchema = new mongoose.Schema({

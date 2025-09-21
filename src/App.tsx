@@ -2,9 +2,12 @@ import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { ProductProvider } from "@/contexts/ProductContext";
+import { ProductDetailProvider } from "@/contexts/ProductDetailContext";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { CartProvider } from "@/contexts/CartContext";
 import { AuthProvider, useAuth } from "@/contexts/AuthContext";
+import { WishlistProvider } from "@/contexts/WishlistContext";
 import { Navbar } from "@/components/Navbar";
 import Index from "./pages/Index";
 import Products from "./pages/Products";
@@ -37,7 +40,14 @@ const AppRoutes = () => {
   return (
     <Routes>
       {/* Public Routes */}
-      <Route path="/*" element={<PublicLayout />} />
+      <Route path="/" element={<PublicLayout />}>
+        <Route path="products/:id" element={
+          <ProductDetailProvider>
+            <ProductDetail />
+          </ProductDetailProvider>
+        } />
+        <Route path="*" element={<PublicLayout />} />
+      </Route>
       
       {/* Admin Routes */}
       <Route path="/admin" element={
@@ -48,8 +58,8 @@ const AppRoutes = () => {
         <Route index element={<Navigate to="products" replace />} />
         <Route path="products" element={<AdminProducts />} />
         <Route path="products/add" element={<AddProduct />} />
-        <Route path="products/edit/:id" element={<AddProduct />} />
-        <Route path="reviews" element={<ProductReviews />} />
+        <Route path="products/:id" element={<AddProduct />} />
+        <Route path="products/:id/reviews" element={<ProductReviews />} />
       </Route>
       
       <Route path="/admin/login" element={<AdminLogin />} />
@@ -60,17 +70,21 @@ const AppRoutes = () => {
 const App = () => {
   return (
     <QueryClientProvider client={queryClient}>
-      <BrowserRouter>
-        <AuthProvider>
+      <AuthProvider>
+        <ProductProvider>
           <CartProvider>
-            <TooltipProvider>
-              <Toaster />
-              <Sonner />
-              <AppRoutes />
-            </TooltipProvider>
+            <WishlistProvider>
+              <TooltipProvider>
+                <BrowserRouter>
+                  <AppRoutes />
+                </BrowserRouter>
+                <Toaster />
+                <Sonner />
+              </TooltipProvider>
+            </WishlistProvider>
           </CartProvider>
-        </AuthProvider>
-      </BrowserRouter>
+        </ProductProvider>
+      </AuthProvider>
     </QueryClientProvider>
   );
 };

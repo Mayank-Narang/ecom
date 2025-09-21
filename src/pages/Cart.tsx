@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useCart } from '@/contexts/CartContext';
+import type { Product } from '@/contexts/CartContext';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -9,10 +10,20 @@ import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
 import { Minus, Plus, Trash2, ShoppingBag, CreditCard } from 'lucide-react';
 import { Link } from 'react-router-dom';
-import { formatCurrency } from '@/utils/currency';
+
+// Fallback currency formatter if the utility is not available
+const formatCurrency = (amount: number): string => {
+  return new Intl.NumberFormat('en-US', {
+    style: 'currency',
+    currency: 'USD',
+  }).format(amount);
+};
 
 const Cart = () => {
   const { items, updateQuantity, removeFromCart, clearCart, getTotalPrice } = useCart();
+  
+  // Ensure items have the correct type
+  const cartItems = items as (Product & { quantity: number })[];
   const { toast } = useToast();
   const [isCheckingOut, setIsCheckingOut] = useState(false);
   const [customerInfo, setCustomerInfo] = useState({
@@ -27,16 +38,33 @@ const Cart = () => {
     if (newQuantity < 1) return;
     updateQuantity(productId, newQuantity);
   };
+  
+  // Helper function to safely get product ID
+  const getProductId = (product: Product) => {
+    return product.id || (product as any)._id;
+  };
 
   const handleCheckout = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    // Basic validation
+    if (!customerInfo.name || !customerInfo.email || !customerInfo.address || !customerInfo.city || !customerInfo.zipCode) {
+      toast({
+        title: 'Error',
+        description: 'Please fill in all required fields',
+        variant: 'destructive',
+      });
+      return;
+    }
+
     setIsCheckingOut(true);
 
-    // Simulate API call
-    setTimeout(() => {
-      /* 
-      MongoDB Order Creation:
+    try {
+      // Simulate API call
+      await new Promise(resolve => setTimeout(resolve, 2000));
       
+      /* 
+      // Uncomment and implement actual API call when backend is ready
       const orderData = {
         customerName: customerInfo.name,
         email: customerInfo.email,
@@ -49,24 +77,32 @@ const Cart = () => {
           productId: item.id,
           name: item.name,
           price: item.price,
-          quantity: item.quantity
+          quantity: item.quantity,
+          imageURL: item.imageURL,
+          category: item.category
         })),
         totalPrice: getTotalPrice(),
         status: 'pending'
       };
 
-      fetch('/api/checkout', {
+      const response = await fetch('/api/orders', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(orderData)
       });
+
+      if (!response.ok) {
+        throw new Error('Failed to place order');
+      }
       */
 
+      // Show success message
       toast({
         title: "Order placed successfully!",
         description: `Thank you ${customerInfo.name}! Your order total is ${formatCurrency(getTotalPrice())}`,
       });
       
+      // Clear cart and reset form
       clearCart();
       setCustomerInfo({
         name: '',
@@ -75,11 +111,28 @@ const Cart = () => {
         city: '',
         zipCode: ''
       });
+    } catch (err) {
+      console.error('Checkout error:', err);
+      const error = err as Error & {
+        response?: {
+          data?: {
+            message?: string;
+          };
+        };
+      };
+      
+      const errorMessage = error.response?.data?.message || error.message || 'An unknown error occurred';
+      toast({
+        title: 'Error',
+        description: `Failed to place order: ${errorMessage}`,
+        variant: 'destructive',
+      });
+    } finally {
       setIsCheckingOut(false);
-    }, 2000);
+    }
   };
 
-  if (items.length === 0) {
+  if (cartItems.length === 0) {
     return (
       <div className="container mx-auto px-4 py-8">
         <div className="text-center py-16">
@@ -107,65 +160,82 @@ const Cart = () => {
       <div className="grid lg:grid-cols-3 gap-8">
         {/* Cart Items */}
         <div className="lg:col-span-2 space-y-4">
-          {items.map(item => (
-            <Card key={item.id} className="border-2 hover:border-primary/30 transition-colors">
-              <CardContent className="p-6">
-                <div className="flex items-start gap-4">
-                  <img
-                    src={item.imageURL}
-                    alt={item.name}
-                    className="w-20 h-20 object-cover rounded-lg"
-                  />
-                  
-                  <div className="flex-1">
-                    <h3 className="font-semibold text-foreground mb-1">{item.name}</h3>
-                    <p className="text-muted-foreground text-sm mb-2 line-clamp-2">
-                      {item.description}
-                    </p>
-                    <Badge variant="secondary">{item.category}</Badge>
-                  </div>
-                  
-                  <div className="text-right">
-                    <div className="text-lg font-bold text-primary mb-2">
-                      {formatCurrency(item.price)}
+          {cartItems.map((item) => {
+            const itemId = getProductId(item);
+            return (
+              <Card key={itemId} className="border-2 hover:border-primary/30 transition-colors">
+                <CardContent className="p-6">
+                  <div className="flex items-start gap-4">
+                    {item.imageURL ? (
+                      <img
+                        src={item.imageURL}
+                        alt={item.name}
+                        className="w-20 h-20 object-cover rounded-lg"
+                      />
+                    ) : (
+                      <div className="w-20 h-20 bg-muted rounded-lg flex items-center justify-center">
+                        <ShoppingBag className="h-6 w-6 text-muted-foreground" />
+                      </div>
+                    )}
+                    
+                    <div className="flex-1">
+                      <h3 className="font-semibold text-foreground mb-1">{item.name}</h3>
+                      <p className="text-muted-foreground text-sm mb-2 line-clamp-2">
+                        {item.description}
+                      </p>
+                      <Badge variant="secondary">{item.category}</Badge>
                     </div>
                     
-                    <div className="flex items-center gap-2 mb-2">
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => handleQuantityChange(item.id, item.quantity - 1)}
-                        disabled={item.quantity <= 1}
-                      >
-                        <Minus className="h-3 w-3" />
-                      </Button>
+                    <div className="text-right">
+                      <div className="text-lg font-bold text-primary mb-2">
+                        {formatCurrency(item.price)}
+                      </div>
                       
-                      <span className="w-8 text-center font-medium">
-                        {item.quantity}
-                      </span>
+                      <div className="flex items-center gap-2 mb-2">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => handleQuantityChange(itemId, item.quantity - 1)}
+                          disabled={item.quantity <= 1}
+                        >
+                          <Minus className="h-3 w-3" />
+                        </Button>
+                        
+                        <span className="w-8 text-center font-medium">
+                          {item.quantity}
+                        </span>
+                        
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => handleQuantityChange(itemId, item.quantity + 1)}
+                        >
+                          <Plus className="h-3 w-3" />
+                        </Button>
+                      </div>
+                      
+                      <div className="text-sm text-muted-foreground">
+                        {formatCurrency(item.price)} × {item.quantity} ={' '}
+                        <span className="font-semibold text-foreground">
+                          {formatCurrency(item.price * item.quantity)}
+                        </span>
+                      </div>
                       
                       <Button
-                        variant="outline"
+                        variant="ghost"
                         size="sm"
-                        onClick={() => handleQuantityChange(item.id, item.quantity + 1)}
+                        onClick={() => removeFromCart(itemId)}
+                        className="text-destructive hover:text-destructive/90"
                       >
-                        <Plus className="h-3 w-3" />
+                        <Trash2 className="h-4 w-4 mr-1" />
+                        Remove
                       </Button>
                     </div>
-                    
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => removeFromCart(item.id)}
-                      className="text-destructive hover:text-destructive hover:bg-destructive/10"
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
                   </div>
-                </div>
-              </CardContent>
-            </Card>
-          ))}
+                </CardContent>
+              </Card>
+            );
+          })}
         </div>
 
         {/* Checkout Form */}
@@ -181,7 +251,7 @@ const Cart = () => {
             <CardContent>
               <div className="mb-6 p-4 bg-muted rounded-lg">
                 <div className="flex justify-between items-center mb-2">
-                  <span className="text-muted-foreground">Items ({items.length})</span>
+                  <span className="text-muted-foreground">Items ({cartItems.length})</span>
                   <span className="font-medium">{formatCurrency(getTotalPrice())}</span>
                 </div>
                 <div className="flex justify-between items-center text-lg font-bold">
@@ -250,7 +320,7 @@ const Cart = () => {
                   size="lg"
                   disabled={isCheckingOut}
                 >
-                  {isCheckingOut ? 'Processing...' : `Place Order - $${getTotalPrice().toFixed(2)}`}
+                  {isCheckingOut ? 'Processing...' : `Place Order - ${formatCurrency(getTotalPrice())}`}
                 </Button>
               </form>
             </CardContent>

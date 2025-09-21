@@ -6,32 +6,50 @@ import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/hooks/use-toast';
 import { useNavigate, useParams } from 'react-router-dom';
 import { Product } from '@/data/products';
+import { createProduct, getProductById, updateProduct } from '@/services/api';
 
 export const AddProduct = () => {
   const { id } = useParams<{ id?: string }>();
   const { toast } = useToast();
   const navigate = useNavigate();
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [formData, setFormData] = useState<Omit<Product, 'id' | 'rating'> & { rating?: number }>({
+  const [formData, setFormData] = useState<{
+    name: string;
+    description: string;
+    price: number;
+    category: string;
+    imageURL: string;
+  }>({
     name: '',
     description: '',
     price: 0,
     category: 'Solar Panels',
     imageURL: '',
-    isActive: true,
   });
   const isEditMode = !!id;
 
   // Load product data if in edit mode
   useEffect(() => {
-    if (id) {
-      const products = JSON.parse(localStorage.getItem('products') || '[]');
-      const productToEdit = products.find((p: Product) => p.id === id);
-      if (productToEdit) {
-        const { id: _, rating: __, ...rest } = productToEdit;
-        setFormData(rest);
+    const loadProduct = async () => {
+      if (id) {
+        try {
+          const product = await getProductById(id);
+          if (product) {
+            const { _id, ratings, averageRating, createdAt, updatedAt, ...rest } = product;
+            setFormData(rest);
+          }
+        } catch (error) {
+          console.error('Error loading product:', error);
+          toast({
+            title: 'Error',
+            description: 'Failed to load product details',
+            variant: 'destructive',
+          });
+        }
       }
-    }
+    };
+    
+    loadProduct();
   }, [id]);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
@@ -42,44 +60,133 @@ export const AddProduct = () => {
     }));
   };
 
+  const validateForm = (): boolean => {
+    const { name, price, description, imageURL, category } = formData;
+    
+    if (!name.trim()) {
+      toast({
+        title: 'Validation Error',
+        description: 'Product name is required',
+        variant: 'destructive',
+      });
+      return false;
+    }
+    
+    if (price <= 0) {
+      toast({
+        title: 'Validation Error',
+        description: 'Price must be greater than 0',
+        variant: 'destructive',
+      });
+      return false;
+    }
+    
+    if (!description.trim()) {
+      toast({
+        title: 'Validation Error',
+        description: 'Product description is required',
+        variant: 'destructive',
+      });
+      return false;
+    }
+    
+    if (!imageURL.trim()) {
+      toast({
+        title: 'Validation Error',
+        description: 'Image URL is required',
+        variant: 'destructive',
+      });
+      return false;
+    }
+    
+    try {
+      new URL(imageURL);
+    } catch (e) {
+      toast({
+        title: 'Validation Error',
+        description: 'Please enter a valid image URL',
+        variant: 'destructive',
+      });
+      return false;
+    }
+    
+    return true;
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    if (!validateForm()) {
+      return;
+    }
+    
     setIsSubmitting(true);
 
     try {
-      const products = JSON.parse(localStorage.getItem('products') || '[]');
-      let updatedProducts;
-      
+      const productData = {
+        ...formData,
+        price: Number(formData.price), // Ensure price is a number
+      };
+
+      console.log('Submitting product data:', productData);
+
       if (isEditMode && id) {
         // Update existing product
-        updatedProducts = products.map((p: Product) => 
-          p.id === id ? { ...formData, id, rating: p.rating || 0 } : p
-        );
+        const updatedProduct = await updateProduct(id, productData);
+        console.log('Updated product:', updatedProduct);
+        
+        toast({
+          title: 'Success!',
+          description: 'Product updated successfully',
+        });
+        
+        // Redirect to products list after a short delay
+        setTimeout(() => {
+          navigate('/admin/products');
+        }, 1000);
       } else {
         // Add new product
-        const newProduct: Product = {
-          ...formData,
-          id: Math.random().toString(36).substr(2, 9),
-          rating: 0,
-        };
-        updatedProducts = [...products, newProduct];
+        const createdProduct = await createProduct(productData);
+        console.log('Created product:', createdProduct);
+        
+        toast({
+          title: 'Success!',
+          description: 'Product added successfully',
+        });
+        
+        // Reset form after successful submission
+        setFormData({
+          name: '',
+          description: '',
+          price: 0,
+          category: 'Solar Panels',
+          imageURL: '',
+        });
+        
+        // Redirect to products list after a short delay
+        setTimeout(() => {
+          navigate('/admin/products');
+        }, 1000);
+      }
+    } catch (error: any) {
+      console.error('Error saving product:', error);
+      console.error('Error details:', {
+        message: error.message,
+        response: error.response?.data,
+        status: error.response?.status,
+      });
+      
+      let errorMessage = 'An unknown error occurred';
+      
+      if (error.response?.data?.message) {
+        errorMessage = error.response.data.message;
+      } else if (error.message) {
+        errorMessage = error.message;
       }
       
-      // Save to localStorage
-      localStorage.setItem('products', JSON.stringify(updatedProducts));
-
-      toast({
-        title: 'Success!',
-        description: isEditMode ? 'Product updated successfully' : 'Product added successfully',
-      });
-
-      // Redirect to products list
-      navigate('/admin/products');
-    } catch (error) {
-      console.error('Error saving product:', error);
       toast({
         title: 'Error',
-        description: `Failed to ${isEditMode ? 'update' : 'add'} product`,
+        description: `Failed to ${isEditMode ? 'update' : 'add'} product: ${errorMessage}`,
         variant: 'destructive',
       });
     } finally {

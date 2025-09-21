@@ -1,75 +1,119 @@
-import { useState, useEffect } from 'react';
-import { useParams } from 'react-router-dom';
+import { useParams, useNavigate, useLocation } from 'react-router-dom';
+import { useCallback } from 'react';
+import { useAuth } from '@/contexts/AuthContext';
 import { Button } from "@/components/ui/button";
 import { useCart } from "@/contexts/CartContext";
-import { Star, ShoppingCart, ArrowLeft, Loader2, Sparkles } from "lucide-react";
+import { Star, ShoppingCart, ArrowLeft, Loader2, Sparkles, RefreshCw } from "lucide-react";
 import { Link } from "react-router-dom";
-import { solarProducts as defaultProducts, Product, Review } from "@/data/products";
 import { formatCurrency } from "@/utils/currency";
 import { useToast } from "@/hooks/use-toast";
 import { ReviewForm } from "@/components/ReviewForm";
 import { getSentimentColor, getSentimentEmoji } from "@/utils/sentimentAnalysis";
+import { useProductDetail } from "@/contexts/ProductDetailContext";
+import { Product } from "@/data/products";
 
-const ProductDetail = () => {
+// Define Review interface locally since we don't want to import from products
+interface Review {
+  id: string;
+  userId: string;
+  userName: string;
+  rating: number;
+  comment: string;
+  date: string;
+  sentiment?: {
+    score: number;
+    comparative: number;
+    sentiment: 'positive' | 'negative' | 'neutral';
+    positiveWords: string[];
+    negativeWords: string[];
+  };
+}
+
+const ProductDetailPage = () => {
   const { id } = useParams<{ id: string }>();
   const { addToCart } = useCart();
-  const [product, setProduct] = useState<Product | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
-  const [reviews, setReviews] = useState<Review[]>([]);
+  const { 
+    product, 
+    reviews, 
+    loading, 
+    error, 
+    addReview 
+  } = useProductDetail();
+  
+  // Use the product directly since it already has the correct type from the context
+  
+  const { user } = useAuth();
+  const navigate = useNavigate();
+  const location = useLocation();
   const { toast } = useToast();
+  
 
-  useEffect(() => {
-    const loadProduct = () => {
-      try {
-        // First check localStorage
-        const savedProducts = localStorage.getItem('products');
-        let productsList: Product[] = [];
 
-        if (savedProducts) {
-          productsList = JSON.parse(savedProducts);
-        } else {
-          // Fallback to default products if localStorage is empty
-          productsList = defaultProducts;
-        }
-
-        const foundProduct = productsList.find(p => p.id === id);
-        if (foundProduct) {
-          setProduct(foundProduct);
-          setReviews(foundProduct.reviews || []);
-        }
-      } catch (error) {
-        console.error('Error loading product:', error);
-        toast({
-          title: 'Error',
-          description: 'Failed to load product details',
-          variant: 'destructive',
-        });
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
-    loadProduct();
-  }, [id, toast]);
-
-  if (isLoading) {
+  if (loading) {
     return (
-      <div className="flex items-center justify-center min-h-[60vh]">
-        <Loader2 className="h-8 w-8 animate-spin" />
+      <div className="flex flex-col items-center justify-center min-h-[60vh] space-y-4">
+        <Loader2 className="h-12 w-12 animate-spin text-primary" />
+        <p className="text-muted-foreground">Loading product details...</p>
       </div>
     );
   }
 
-  if (!product) {
+  if (error || !product) {
     return (
-      <div className="container mx-auto py-12 text-center">
-        <h2 className="text-2xl font-bold mb-4">Product not found</h2>
-        <Link to="/products" className="text-primary hover:underline">
-          Back to Products
-        </Link>
+      <div className="container mx-auto px-4 py-8 max-w-3xl">
+        <div className="bg-destructive/10 border border-destructive/30 rounded-lg p-6 text-center">
+          <h2 className="text-2xl font-bold text-destructive mb-2">
+            {error || 'Product Not Found'}
+          </h2>
+          <p className="text-muted-foreground mb-6">
+            {error 
+              ? 'We encountered an error loading this product.' 
+              : 'The product you are looking for does not exist or may have been removed.'}
+          </p>
+          <div className="flex justify-center gap-4">
+            <Button asChild variant="outline">
+              <Link to="/products" className="flex items-center">
+                <ArrowLeft className="mr-2 h-4 w-4" />
+                Back to Products
+              </Link>
+            </Button>
+            <Button variant="ghost" onClick={() => window.location.reload()}>
+              <RefreshCw className="mr-2 h-4 w-4" />
+              Try Again
+            </Button>
+          </div>
+        </div>
       </div>
     );
   }
+
+  const handleAddToCart = useCallback(() => {
+    if (!product) return;
+    
+    addToCart(product);
+    toast({
+      title: 'Added to cart',
+      description: `${product.name} has been added to your cart`,
+    });
+  }, [product, addToCart, toast]);
+
+  const handleAddReview = useCallback(async (reviewData: Omit<Review, 'id' | 'date' | 'sentiment'>) => {
+    try {
+      await addReview(reviewData);
+      toast({
+        title: 'Review submitted!',
+        description: 'Thank you for your review.',
+      });
+    } catch (error) {
+      console.error('Error submitting review:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to submit review. Please try again.',
+        variant: 'destructive',
+      });
+    }
+  }, [addReview, toast]);
+
 
   return (
     <div className="container mx-auto py-12 px-4">
@@ -95,22 +139,20 @@ const ProductDetail = () => {
           <div>
             <h1 className="text-3xl font-bold mb-2">{product.name}</h1>
             <div className="flex items-center mb-4">
-              <div className="flex items-center mr-4">
-                <div className="flex text-yellow-400 mr-2">
-                  {[...Array(5)].map((_, i) => (
-                    <Star 
-                      key={i}
-                      className={`h-5 w-5 ${i < Math.floor(product.rating) ? 'fill-current' : 'text-gray-300'}`}
-                    />
-                  ))}
-                </div>
-                <span className="text-sm text-muted-foreground">
-                  {product.rating.toFixed(1)} ({reviews.length} review{reviews.length !== 1 ? 's' : ''})
+              <div className="flex items-center">
+                {[...Array(5)].map((_, i) => (
+                  <Star
+                    key={i}
+                    className={`h-5 w-5 ${i < (product.rating || 0) ? 'text-yellow-400 fill-current' : 'text-gray-300'}`}
+                  />
+                ))}
+                <span className="ml-2 text-sm text-muted-foreground">
+                  {product.rating ? product.rating.toFixed(1) : 'No'} rating
                 </span>
-              </div>
-              
-              <div className="text-sm text-muted-foreground">
-                {reviews.length} review{reviews.length !== 1 ? 's' : ''}
+                <span className="mx-2 text-muted-foreground">•</span>
+                <span className="text-sm text-muted-foreground">
+                  {reviews.length} review{reviews.length !== 1 ? 's' : ''}
+                </span>
               </div>
             </div>
             
@@ -122,7 +164,7 @@ const ProductDetail = () => {
               <Button 
                 size="lg" 
                 className="bg-primary hover:bg-primary/90 text-primary-foreground flex-1"
-                onClick={() => addToCart(product)}
+                onClick={handleAddToCart}
               >
                 <ShoppingCart className="h-5 w-5 mr-2" />
                 Add to Cart
@@ -134,7 +176,11 @@ const ProductDetail = () => {
               <h3 className="text-xl font-semibold mb-6">
                 Customer Reviews {reviews.length > 0 && `(${reviews.length})`}
               </h3>
-              
+              <h4 className="text-lg font-medium mb-2">
+                Average Rating: {reviews && reviews.length > 0 
+                  ? (reviews.reduce((sum, review) => sum + review.rating, 0) / reviews.length).toFixed(1)
+                  : 'No ratings yet'}
+              </h4>
               {reviews.length > 0 ? (
                 <div className="space-y-6">
                   {reviews.map((review) => (
@@ -175,25 +221,21 @@ const ProductDetail = () => {
                   ))}
                 </div>
               ) : (
-                <p className="text-muted-foreground">No reviews yet. Be the first to review!</p>
+                <div>
+                  <p className="text-muted-foreground mb-4">No reviews yet. Be the first to review!</p>
+                  {!user && (
+                    <div className="mt-4 p-4 border rounded-lg bg-gray-50">
+                      <p className="text-center text-gray-600 mb-2">Please log in to leave a review</p>
+                      <Button 
+                        onClick={() => navigate('/admin/login', { state: { from: location } })}
+                        className="w-full"
+                      >
+                        Log In
+                      </Button>
+                    </div>
+                  )}
+                </div>
               )}
-              
-              {/* Review Form */}
-              <ReviewForm 
-                productId={product.id} 
-                onReviewSubmit={() => {
-                  // Reload product to get updated reviews
-                  const savedProducts = localStorage.getItem('products');
-                  if (savedProducts) {
-                    const products = JSON.parse(savedProducts);
-                    const updatedProduct = products.find((p: Product) => p.id === product.id);
-                    if (updatedProduct) {
-                      setProduct(updatedProduct);
-                      setReviews(updatedProduct.reviews || []);
-                    }
-                  }
-                }} 
-              />
             </div>
           </div>
         </div>
@@ -202,4 +244,4 @@ const ProductDetail = () => {
   );
 };
 
-export default ProductDetail;
+export default ProductDetailPage;

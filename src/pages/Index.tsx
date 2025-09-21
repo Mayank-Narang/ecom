@@ -2,7 +2,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Link } from "react-router-dom";
-import { Sun, Leaf, Zap, ShoppingCart, BarChart3, ArrowRight, Lock } from "lucide-react";
+import { Sun, Leaf, Zap, ShoppingCart, BarChart3, ArrowRight } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 
 const Index = () => {
@@ -37,14 +37,6 @@ const Index = () => {
                   <ArrowRight className="h-5 w-5 ml-2" />
                 </Button>
               </Link>
-              {isAuthenticated && (
-                <Link to="/admin">
-                  <Button variant="outline" size="lg" className="px-8 py-3">
-                    <Lock className="h-5 w-5 mr-2" />
-                    Admin Panel
-                  </Button>
-                </Link>
-              )}
             </div>
           </div>
         </div>
@@ -111,16 +103,10 @@ const Index = () => {
             Join thousands of satisfied customers who have made the switch to clean, renewable energy.
           </p>
           
-          <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
+          <div className="flex justify-center">
             <Link to="/products">
               <Button size="lg" className="bg-primary hover:bg-primary/90 text-primary-foreground px-8 py-3">
                 Browse Products
-              </Button>
-            </Link>
-            
-            <Link to="/admin">
-              <Button variant="outline" size="lg" className="px-8 py-3">
-                View Dashboard
               </Button>
             </Link>
           </div>

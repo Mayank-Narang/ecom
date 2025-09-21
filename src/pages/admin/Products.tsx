@@ -4,7 +4,8 @@ import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
 import { Trash2, Edit, Plus, Search, Package } from 'lucide-react';
 import { Link } from 'react-router-dom';
-import { Product, solarProducts as initialProducts } from '@/data/products';
+import { Product } from '@/data/products';
+import { getProducts, deleteProduct } from '@/services/api';
 
 export const AdminProducts = () => {
   const [products, setProducts] = useState<Product[]>([]);
@@ -12,40 +13,21 @@ export const AdminProducts = () => {
   const [isLoading, setIsLoading] = useState(true);
   const { toast } = useToast();
 
-  // Load products from localStorage on component mount
+  // Load products from API on component mount
   useEffect(() => {
     loadProducts();
   }, []);
 
-  const loadProducts = () => {
+  const loadProducts = async () => {
     try {
-      console.log('Loading products...');
-      const savedProducts = localStorage.getItem('products');
-      
-      if (savedProducts) {
-        // Load from localStorage if available
-        const parsedProducts = JSON.parse(savedProducts);
-        console.log('Loaded products from localStorage:', parsedProducts);
-        setProducts(Array.isArray(parsedProducts) ? parsedProducts : []);
-      } else {
-        // Use initial products if localStorage is empty
-        console.log('Using initial products:', initialProducts);
-        const productsWithDefaults = initialProducts.map(product => ({
-          ...product,
-          isActive: product.isActive !== undefined ? product.isActive : true,
-          stock: product.stock || 10
-        }));
-        
-        // Save to localStorage for future use
-        localStorage.setItem('products', JSON.stringify(productsWithDefaults));
-        console.log('Saved initial products to localStorage');
-        setProducts(productsWithDefaults);
-      }
+      setIsLoading(true);
+      const data = await getProducts();
+      setProducts(data);
     } catch (error) {
       console.error('Error loading products:', error);
       toast({
         title: 'Error',
-        description: 'Failed to load products',
+        description: 'Failed to load products from server',
         variant: 'destructive',
       });
     } finally {
@@ -53,22 +35,38 @@ export const AdminProducts = () => {
     }
   };
 
-  const handleDelete = (id: string) => {
+  const handleDelete = async (id: string) => {
+    if (!id) {
+      toast({
+        title: 'Error',
+        description: 'Invalid product ID',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    if (!window.confirm('Are you sure you want to delete this product? This action cannot be undone.')) {
+      return;
+    }
+
     try {
-      const updatedProducts = products.filter(product => product.id !== id);
-      localStorage.setItem('products', JSON.stringify(updatedProducts));
-      setProducts(updatedProducts);
+      await deleteProduct(id);
+      // Optimistically update the UI
+      setProducts(products.filter(product => product._id !== id));
       toast({
         title: 'Success',
         description: 'Product deleted successfully',
       });
     } catch (error) {
       console.error('Error deleting product:', error);
+      const errorMessage = error instanceof Error ? error.message : 'Failed to delete product';
       toast({
         title: 'Error',
-        description: 'Failed to delete product',
+        description: errorMessage,
         variant: 'destructive',
       });
+      // Refresh the product list in case of error
+      loadProducts();
     }
   };
 
@@ -113,9 +111,10 @@ export const AdminProducts = () => {
       <div className="rounded-md border">
         {filteredProducts.length === 0 ? (
           <div className="text-center p-8">
-            <div className="mx-auto h-12 w-12 text-muted-foreground flex items-center justify-center">
+            <div className="mx-auto h-12 w-12 text-muted-foreground flex items-center justify-center mb-2">
               <Package className="h-8 w-8" />
             </div>
+            <p className="text-muted-foreground">No products found</p>
             <h3 className="mt-2 text-sm font-medium">No products found</h3>
             <p className="mt-1 text-sm text-muted-foreground">
               Get started by adding a new product.
@@ -132,41 +131,45 @@ export const AdminProducts = () => {
         ) : (
           <div className="divide-y">
             {filteredProducts.map((product) => (
-              <div key={product.id} className="p-4 flex items-start justify-between">
-                <div className="flex gap-4">
-                  <img
-                    src={product.imageURL}
-                    alt={product.name}
-                    className="h-16 w-16 rounded-md object-cover"
-                  />
-                  <div>
-                    <h3 className="font-medium">{product.name}</h3>
-                    <p className="text-sm text-muted-foreground line-clamp-2">
-                      {product.description}
-                    </p>
-                    <div className="mt-1 flex items-center gap-2">
-                      <span className="font-medium">₹{product.price.toFixed(2)}</span>
-                      <span className="text-xs text-muted-foreground">•</span>
-                      <span className="text-sm text-muted-foreground">{product.category}</span>
+              <div key={product._id} className="p-4 flex items-start justify-between">
+                <div className="border rounded-lg p-4">
+                  <div className="flex items-start justify-between">
+                    <div className="flex items-center space-x-4">
+                      <div className="w-16 h-16 bg-gray-100 rounded-md overflow-hidden">
+                        <img
+                          src={product.imageURL}
+                          alt={product.name}
+                          className="w-full h-full object-cover"
+                        />
+                      </div>
+                      <div>
+                        <h3 className="font-medium">{product.name}</h3>
+                        <p className="text-sm text-gray-500">₹{product.price.toLocaleString()}</p>
+                        <p className="text-sm text-gray-500">{product.category}</p>
+                        <p className="text-xs text-gray-400">
+                          Rating: {product.averageRating?.toFixed(1) || 'N/A'} ({product.ratings?.length || 0} reviews)
+                        </p>
+                      </div>
+                    </div>
+                    <div className="flex items-center space-x-2">
+                      <Button variant="ghost" size="icon" asChild>
+                        <Link
+                          to={`/admin/products/${product._id}`}
+                          className="text-blue-600 hover:text-blue-800"
+                        >
+                          <Edit className="h-4 w-4" />
+                        </Link>
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => handleDelete(product._id)}
+                        disabled={isLoading}
+                      >
+                        <Trash2 className="h-4 w-4 text-red-500" />
+                      </Button>
                     </div>
                   </div>
-                </div>
-                <div className="flex gap-2">
-                  <Button variant="outline" size="sm" asChild>
-                    <Link to={`/admin/products/edit/${product.id}`}>
-                      <Edit className="h-4 w-4 mr-1" />
-                      Edit
-                    </Link>
-                  </Button>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => handleDelete(product.id)}
-                    className="text-destructive hover:text-destructive hover:bg-destructive/10"
-                  >
-                    <Trash2 className="h-4 w-4 mr-1" />
-                    Delete
-                  </Button>
                 </div>
               </div>
             ))}
