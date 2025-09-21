@@ -4,7 +4,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { ProductProvider } from "@/contexts/ProductContext";
 import { ProductDetailProvider } from "@/contexts/ProductDetailContext";
-import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+import { BrowserRouter, Routes, Route, Navigate, useLocation } from "react-router-dom";
 import { CartProvider } from "@/contexts/CartContext";
 import { AuthProvider, useAuth } from "@/contexts/AuthContext";
 import { WishlistProvider } from "@/contexts/WishlistContext";
@@ -23,29 +23,36 @@ import { ProtectedRoute } from "@/components/ProtectedRoute";
 
 const queryClient = new QueryClient();
 
-const PublicLayout = () => (
-  <div className="min-h-screen bg-background">
-    <Navbar />
-    <Routes>
-      <Route path="/" element={<Index />} />
-      <Route path="/products" element={<Products />} />
-      <Route path="/products/:id" element={<ProductDetail />} />
-      <Route path="/cart" element={<Cart />} />
-      <Route path="*" element={<NotFound />} />
-    </Routes>
-  </div>
-);
+const PublicLayout = () => {
+  const location = useLocation();
+  
+  return (
+    <div className="min-h-screen bg-background">
+      <Navbar />
+      <Routes location={location} key={location.pathname}>
+        <Route path="/" element={<Index />} />
+        <Route path="/products" element={<Products />} />
+        <Route 
+          path="/products/:id" 
+          element={
+            <ProductDetailProvider initialProduct={location.state?.product || null}>
+              <ProductDetail />
+            </ProductDetailProvider>
+          } 
+        />
+        <Route path="/cart" element={<Cart />} />
+        <Route path="*" element={<NotFound />} />
+      </Routes>
+    </div>
+  );
+};
 
 const AppRoutes = () => {
   return (
     <Routes>
       {/* Public Routes */}
       <Route path="/" element={<PublicLayout />}>
-        <Route path="products/:id" element={
-          <ProductDetailProvider>
-            <ProductDetail />
-          </ProductDetailProvider>
-        } />
+        <Route path="products/:id" element={<ProductDetail />} />
         <Route path="*" element={<PublicLayout />} />
       </Route>
       
@@ -67,11 +74,11 @@ const AppRoutes = () => {
   );
 };
 
-const App = () => {
-  return (
-    <QueryClientProvider client={queryClient}>
-      <AuthProvider>
-        <ProductProvider>
+const App = () => (
+  <QueryClientProvider client={queryClient}>
+    <AuthProvider>
+      <ProductProvider>
+        <ProductDetailProvider>
           <CartProvider>
             <WishlistProvider>
               <TooltipProvider>
@@ -83,10 +90,10 @@ const App = () => {
               </TooltipProvider>
             </WishlistProvider>
           </CartProvider>
-        </ProductProvider>
-      </AuthProvider>
-    </QueryClientProvider>
-  );
-};
+        </ProductDetailProvider>
+      </ProductProvider>
+    </AuthProvider>
+  </QueryClientProvider>
+);
 
 export default App;

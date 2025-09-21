@@ -4,6 +4,17 @@ const Product = require('../models/Product');
 const Review = require('../models/Review');
 const mongoose = require('mongoose');
 
+// List all product IDs
+router.get('/ids', async (req, res) => {
+  try {
+    const products = await Product.find({}, '_id').lean();
+    res.json(products.map(p => p._id.toString()));
+  } catch (err) {
+    console.error('Error fetching product IDs:', err);
+    res.status(500).json({ success: false, message: 'Error fetching product IDs' });
+  }
+});
+
 // Test MongoDB connection
 router.get('/test', async (req, res) => {
   try {

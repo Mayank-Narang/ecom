@@ -5,28 +5,52 @@ const connectDB = async () => {
   try {
     // Close existing connection if any
     if (mongoose.connection.readyState === 1) {
+      console.log('Closing existing MongoDB connection...');
       await mongoose.disconnect();
     }
 
     // Set strict query mode
     mongoose.set('strictQuery', true);
 
+    console.log('Attempting to connect to MongoDB...');
+    console.log('Connection string:', process.env.MONGO_URI);
+
     // Connect with retry logic
     let retries = 3;
+    let lastError = null;
+    
     while (retries > 0) {
       try {
-        await mongoose.connect(process.env.MONGO_URI, {
+        console.log(`Connection attempt ${4 - retries}/3...`);
+        
+        const conn = await mongoose.connect(process.env.MONGO_URI, {
           dbName: 'ecom',
-          serverSelectionTimeoutMS: 5000, // 5 seconds timeout
-          socketTimeoutMS: 45000, // 45 seconds timeout
+          serverSelectionTimeoutMS: 10000, // Increased to 10 seconds
+          socketTimeoutMS: 45000,
+          retryWrites: true,
+          w: 'majority'
         });
-        console.log('MongoDB Connected...');
+        
+        console.log('MongoDB Connected to:', conn.connection.host);
         return; // Successfully connected
       } catch (err) {
+        lastError = err;
         retries--;
-        console.error(`MongoDB connection error (${retries} retries left):`, err.message);
-        if (retries === 0) throw err;
-        await new Promise(resolve => setTimeout(resolve, 2000)); // Wait 2 seconds before retry
+        console.error(`MongoDB connection error (${retries} retries left):`, {
+          message: err.message,
+          name: err.name,
+          code: err.code,
+          codeName: err.codeName,
+          errorLabels: err.errorLabels,
+          stack: err.stack
+        });
+        
+        if (retries === 0) {
+          console.error('All connection attempts failed. Last error:', lastError);
+          throw lastError;
+        }
+        
+        await new Promise(resolve => setTimeout(resolve, 3000)); // Wait 3 seconds before retry
       }
     }
   } catch (err) {

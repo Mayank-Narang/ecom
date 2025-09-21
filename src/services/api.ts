@@ -7,8 +7,53 @@ const api = axios.create({
   baseURL: API_BASE_URL,
   headers: {
     'Content-Type': 'application/json',
+    'Accept': 'application/json',
   },
+  withCredentials: true,
+  timeout: 10000,
 });
+
+// Add request interceptor for logging
+api.interceptors.request.use(
+  (config) => {
+    console.log(`[API] ${config.method?.toUpperCase()} ${config.url}`, {
+      params: config.params,
+      data: config.data,
+    });
+    return config;
+  },
+  (error) => {
+    console.error('[API] Request error:', error);
+    return Promise.reject(error);
+  }
+);
+
+// Add response interceptor for logging
+api.interceptors.response.use(
+  (response) => {
+    console.log(`[API] ${response.config.method?.toUpperCase()} ${response.config.url} ${response.status}`, {
+      data: response.data,
+    });
+    return response;
+  },
+  (error) => {
+    const errorDetails = {
+      message: error.message,
+      config: {
+        url: error.config?.url,
+        method: error.config?.method,
+        data: error.config?.data,
+      },
+      response: error.response ? {
+        status: error.response.status,
+        statusText: error.response.statusText,
+        data: error.response.data,
+      } : undefined,
+    };
+    console.error('[API] Response error:', errorDetails);
+    return Promise.reject(error);
+  }
+);
 
 // Products API
 export interface GetProductsParams {
@@ -55,11 +100,23 @@ export const getProductById = async (id: string) => {
     console.log(`Fetching product with ID: ${id}`);
     const response = await api.get(`/products/${id}`);
     
+    console.log('Raw API response:', {
+      status: response.status,
+      statusText: response.statusText,
+      headers: response.headers,
+      data: response.data
+    });
+    
+    if (!response.data) {
+      throw new Error('Empty response from server');
+    }
+    
     if (!response.data.success) {
       throw new Error(response.data.message || 'Failed to fetch product');
     }
     
     if (!response.data.data) {
+      console.error('No data in response:', response.data);
       throw new Error('No product data found in response');
     }
     

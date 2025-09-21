@@ -19,37 +19,70 @@ interface ProductDetailContextType {
 
 const ProductDetailContext = createContext<ProductDetailContextType | undefined>(undefined);
 
-export const ProductDetailProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+interface ProductDetailProviderProps {
+  children: React.ReactNode;
+  initialProduct?: ProductWithRating | null;
+}
+
+export const ProductDetailProvider: React.FC<ProductDetailProviderProps> = ({ 
+  children,
+  initialProduct = null 
+}) => {
   const { id } = useParams<{ id: string }>();
-  const [product, setProduct] = useState<ProductWithRating | null>(null);
+  const [product, setProduct] = useState<ProductWithRating | null>(initialProduct);
   const [reviews, setReviews] = useState<Review[]>([]);
-  const [loading, setLoading] = useState<boolean>(true);
+  const [loading, setLoading] = useState<boolean>(!initialProduct);
   const [error, setError] = useState<string | null>(null);
 
   const fetchProduct = async () => {
+    console.log('fetchProduct called with id:', id);
     if (!id) {
-      setError('No product ID provided');
+      const errorMsg = 'No product ID provided';
+      console.error(errorMsg);
+      setError(errorMsg);
       setLoading(false);
       return;
     }
     
     try {
+      console.log(`Starting to fetch product with ID: ${id}`);
       setLoading(true);
       setError(null);
-      console.log(`Fetching product with ID: ${id}`);
+      
+      console.log('Calling getProductById...');
       const data = await getProductById(id);
-      console.log('Product data received in context:', data);
-      setProduct(data as ProductWithRating);
+      console.log('Product data received in context:', {
+        hasData: !!data,
+        data: data,
+        type: typeof data,
+        keys: data ? Object.keys(data) : 'no data'
+      });
+      
+      if (!data) {
+        throw new Error('No data returned from getProductById');
+      }
+      
+      // Ensure the product has the required id field
+      const formattedProduct = {
+        ...data,
+        id: data.id || data._id || '', // Ensure id is always defined
+      };
+      
+      setProduct(formattedProduct as ProductWithRating);
+      console.log('Product set in context state');
+      
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Failed to fetch product details';
       console.error('Error in fetchProduct:', {
         error: err,
         message: errorMessage,
-        productId: id
+        productId: id,
+        stack: err instanceof Error ? err.stack : undefined
       });
       setError(errorMessage);
       setProduct(null);
     } finally {
+      console.log('fetchProduct completed, setting loading to false');
       setLoading(false);
     }
   };

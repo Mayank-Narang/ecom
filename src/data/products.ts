@@ -16,7 +16,7 @@ export interface Review {
 }
 
 export interface Product {
-  id?: string; // Optional for frontend-created objects
+  id: string; // Required for frontend usage
   _id: string; // MongoDB ID
   name: string;
   price: number;

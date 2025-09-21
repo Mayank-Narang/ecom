@@ -26,7 +26,11 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
 
   return (
     <Card className="group hover:shadow-lg transition-all duration-300 hover:scale-105 border-2 hover:border-primary/30 h-full flex flex-col">
-      <Link to={`/products/${product.id}`} className="block flex-1 flex flex-col">
+      <Link 
+        to={`/products/${product.id}`}
+        state={{ product }} // Pass the entire product object in the state
+        className="block flex-1 flex flex-col"
+      >
         <CardHeader className="p-0 flex-shrink-0">
           <div className="relative aspect-[4/3] overflow-hidden">
             <img
@@ -68,7 +72,12 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
               className="w-full text-xs sm:text-sm"
               asChild
             >
-              <Link to={`/products/${product.id}`} className="flex items-center justify-center">
+              <Link 
+              to={`/products/${product.id}`}
+              state={{ product }} // Pass the entire product object in the state
+              className="flex items-center justify-center"
+              onClick={(e) => e.stopPropagation()} // Prevent event bubbling
+            >
                 Details
                 <ArrowRight className="h-3.5 w-3.5 ml-1" />
               </Link>
