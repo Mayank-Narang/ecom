@@ -11,13 +11,7 @@ import { useToast } from '@/hooks/use-toast';
 import { Minus, Plus, Trash2, ShoppingBag, CreditCard } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
-// Fallback currency formatter if the utility is not available
-const formatCurrency = (amount: number): string => {
-  return new Intl.NumberFormat('en-US', {
-    style: 'currency',
-    currency: 'USD',
-  }).format(amount);
-};
+import { formatCurrency } from '@/utils/currency';
 
 const Cart = () => {
   const { items, updateQuantity, removeFromCart, clearCart, getTotalPrice } = useCart();
