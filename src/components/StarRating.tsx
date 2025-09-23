@@ -33,11 +33,10 @@ const StarRating: React.FC<StarRatingProps> = ({
   // Handle half-star ratings for display
   const renderStar = (index: number) => {
     const starValue = index + 1;
-    const isHovered = hover !== null && starValue <= hover;
     const isFilled = starValue <= Math.floor(displayRating);
     const hasHalfStar = !isFilled && starValue - 0.5 <= displayRating;
 
-    const StarIcon = isHovered || isFilled ? FaStar : 
+    const StarIcon = isFilled ? FaStar : 
                      hasHalfStar ? FaStarHalfAlt : FaRegStar;
     
     return (
@@ -59,7 +58,7 @@ const StarRating: React.FC<StarRatingProps> = ({
         <StarIcon
           className="transition-colors duration-200"
           size={size}
-          color={isHovered || isFilled || hasHalfStar ? '#ffc107' : '#e4e5e9'}
+          color={isFilled || hasHalfStar ? '#ffc107' : '#e4e5e9'}
           onMouseEnter={() => !readonly && setHover(starValue)}
           onMouseLeave={() => !readonly && setHover(null)}
         />
@@ -78,9 +77,9 @@ const StarRating: React.FC<StarRatingProps> = ({
       aria-readonly={readonly}
     >
       {[0, 1, 2, 3, 4].map(renderStar)}
-      {!readonly && (
+      {!readonly && displayRating > 0 && (
         <span className="ml-2 text-sm text-gray-500">
-          {hover || displayRating || ''} {hover || displayRating ? 'stars' : ''}
+          {displayRating.toFixed(1)} stars
         </span>
       )}
     </div>
