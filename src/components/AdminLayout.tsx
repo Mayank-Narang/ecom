@@ -15,6 +15,12 @@ export const AdminLayout = () => {
         { name: 'Add New Product', href: '/admin/products/add', icon: Plus },
         { name: 'My Products', href: '/admin/products', icon: List },
       ]
+    },
+    {
+      section: 'Analytics',
+      items: [
+        { name: 'Reviews', href: '/admin/reviews', icon: Star },
+      ]
     }
   ];
 

@@ -26,6 +26,29 @@ export interface ReviewResponse {
   };
 }
 
+export interface ReviewStats {
+  ratingDistribution: {
+    '1': number;
+    '2': number;
+    '3': number;
+    '4': number;
+    '5': number;
+  };
+  sentimentDistribution: {
+    positive: number;
+    neutral: number;
+    negative: number;
+  };
+  averageRating: number;
+  totalReviews: number;
+  productName: string;
+}
+
+export interface ReviewStatsResponse {
+  success: boolean;
+  data: ReviewStats;
+}
+
 export interface CreateReviewData {
   productId: string;
   userName: string;
@@ -168,19 +191,65 @@ export const getProductById = async (id: string) => {
 };
 
 export const deleteProduct = async (id: string) => {
+  if (!id) {
+    throw new Error('Product ID is required');
+  }
+
   try {
+    console.log(`[API] Attempting to delete product with ID:`, id);
+    
+    // Make the DELETE request with the ID in the URL path
     const response = await api.delete(`/products/${id}`);
+    
+    console.log('[API] Delete response:', response.data);
+    
+    // Check for success in the response
     if (response.data && response.data.success) {
       return true;
     }
-    throw new Error(response.data?.message || 'Failed to delete product');
-  } catch (error) {
-    console.error(`Error deleting product ${id}:`, error);
-    // If we get a 404, the product was already deleted
+    
+    // If we get here, the request succeeded but the response format is unexpected
+    console.warn('Unexpected response format from delete endpoint:', response.data);
+    return true; // Still consider it a success if we get this far
+    
+  } catch (error: any) {
+    console.error(`[API] Error deleting product ${id}:`, {
+      message: error.message,
+      status: error.response?.status,
+      data: error.response?.data,
+    });
+    
+    // Handle different error cases
     if (error.response?.status === 404) {
-      return true;
+      console.log(`[API] Product ${id} not found`);
+      throw new Error('Product not found. It may have already been deleted.');
     }
-    throw new Error(error.response?.data?.message || error.message || 'Failed to delete product');
+    
+    if (error.code === 'ECONNABORTED') {
+      throw new Error('Request timed out. Please check your connection and try again.');
+    }
+    
+    if (!navigator.onLine) {
+      throw new Error('You are offline. Please check your internet connection.');
+    }
+    
+    // Handle validation errors
+    if (error.response?.data?.errors) {
+      const errorMessages = Object.values(error.response.data.errors)
+        .map((err: any) => err.message || err.msg)
+        .filter(Boolean);
+      
+      if (errorMessages.length > 0) {
+        throw new Error(errorMessages.join('. '));
+      }
+    }
+    
+    // Handle other errors
+    const errorMessage = error.response?.data?.message || 
+                        error.message || 
+                        'Failed to delete product. Please try again.';
+    
+    throw new Error(errorMessage);
   }
 };
 
@@ -281,21 +350,50 @@ export const getProductReviews = async (productId: string): Promise<ReviewRespon
  */
 export const createReview = async (reviewData: CreateReviewData) => {
   try {
-    console.log('Submitting review:', reviewData);
-    const response = await api.post('/reviews', {
-      productId: reviewData.productId,
-      userName: reviewData.userName,
-      rating: reviewData.rating,
-      comment: reviewData.comment
-    });
-    console.log('Review submission response:', response.data);
+    const response = await api.post<ReviewResponse>('/reviews', reviewData);
     return response.data;
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error creating review:', {
       message: error.message,
       response: error.response?.data,
       status: error.response?.status,
-      config: error.config,
+    });
+    throw error;
+  }
+};
+
+/**
+ * Get review statistics for a product
+ * @param productId The ID of the product to get statistics for
+ * @returns Review statistics including rating and sentiment distribution
+ */
+export const getReviewStats = async (productId: string): Promise<ReviewStatsResponse> => {
+  try {
+    const response = await api.get<ReviewStatsResponse>(`/reviews/stats/${productId}`);
+    return response.data;
+  } catch (error: any) {
+    console.error('Error fetching review stats:', {
+      message: error.message,
+      response: error.response?.data,
+      status: error.response?.status,
+    });
+    throw error;
+  }
+};
+
+/**
+ * Get review statistics for all products
+ * @returns Review statistics for all products combined
+ */
+export const getAllReviewsStats = async (): Promise<ReviewStatsResponse> => {
+  try {
+    const response = await api.get<ReviewStatsResponse>('/reviews/stats');
+    return response.data;
+  } catch (error: any) {
+    console.error('Error fetching all reviews stats:', {
+      message: error.message,
+      response: error.response?.data,
+      status: error.response?.status,
     });
     throw error;
   }

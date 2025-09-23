@@ -35,8 +35,10 @@ export const AdminProducts = () => {
     }
   };
 
-  const handleDelete = async (id: string) => {
-    if (!id) {
+  const [isDeleting, setIsDeleting] = useState<{[key: string]: boolean}>({});
+
+  const handleDelete = async (productId: string) => {
+    if (!productId) {
       toast({
         title: 'Error',
         description: 'Invalid product ID',
@@ -45,28 +47,74 @@ export const AdminProducts = () => {
       return;
     }
 
-    if (!window.confirm('Are you sure you want to delete this product? This action cannot be undone.')) {
+    // Find the product to confirm deletion
+    const productToDelete = products.find(p => p._id === productId || p.id === productId);
+    if (!productToDelete) {
+      toast({
+        title: 'Error',
+        description: 'Product not found in local state',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    // Get the correct ID to use (prefer id over _id if available)
+    const idToDelete = productToDelete.id || productToDelete._id;
+    
+    if (!idToDelete) {
+      toast({
+        title: 'Error',
+        description: 'Could not determine product ID',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    if (!window.confirm(`Are you sure you want to delete "${productToDelete.name}"? This action cannot be undone.`)) {
       return;
     }
 
     try {
-      await deleteProduct(id);
+      // Use the determined ID for all operations
+      setIsDeleting(prev => ({ ...prev, [idToDelete]: true }));
+      
+      console.log('Deleting product:', { id: idToDelete, name: productToDelete.name });
+      
+      await deleteProduct(idToDelete);
+      
       // Optimistically update the UI
-      setProducts(products.filter(product => product._id !== id));
+      setProducts(prevProducts => 
+        prevProducts.filter(product => product._id !== idToDelete && product.id !== idToDelete)
+      );
+      
       toast({
         title: 'Success',
-        description: 'Product deleted successfully',
+        description: `"${productToDelete.name}" has been deleted successfully`,
       });
     } catch (error) {
       console.error('Error deleting product:', error);
-      const errorMessage = error instanceof Error ? error.message : 'Failed to delete product';
+      
+      let errorMessage = 'Failed to delete product';
+      if (error instanceof Error) {
+        errorMessage = error.message;
+      }
+      
       toast({
         title: 'Error',
         description: errorMessage,
         variant: 'destructive',
       });
-      // Refresh the product list in case of error
-      loadProducts();
+      
+      // Refresh the product list to ensure consistency
+      await loadProducts();
+    } finally {
+      setIsDeleting(prev => {
+        const newState = { ...prev };
+        // Clean up loading state for both possible ID fields
+        if (productToDelete.id) delete newState[productToDelete.id];
+        if (productToDelete._id) delete newState[productToDelete._id];
+        return newState;
+      });
     }
   };
 
@@ -151,7 +199,7 @@ export const AdminProducts = () => {
                     <div className="flex items-center space-x-2">
                       <Button variant="ghost" size="icon" asChild>
                         <Link
-                          to={`/admin/products/${product._id}`}
+                          to={`/admin/products/${product.id || product._id}`}
                           className="text-blue-600 hover:text-blue-800"
                         >
                           <Edit className="h-4 w-4" />
@@ -160,10 +208,15 @@ export const AdminProducts = () => {
                       <Button
                         variant="ghost"
                         size="icon"
-                        onClick={() => handleDelete(product._id)}
-                        disabled={isLoading}
+                        onClick={() => handleDelete(product.id || product._id)}
+                        disabled={isLoading || isDeleting[product.id || product._id]}
+                        aria-label={`Delete ${product.name}`}
                       >
-                        <Trash2 className="h-4 w-4 text-red-500" />
+                        {isDeleting[product.id || product._id] ? (
+                          <div className="h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent" />
+                        ) : (
+                          <Trash2 className="h-4 w-4 text-red-500" />
+                        )}
                       </Button>
                     </div>
                   </div>

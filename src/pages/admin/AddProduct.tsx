@@ -23,7 +23,7 @@ export const AddProduct = () => {
     name: '',
     description: '',
     price: 0,
-    category: 'Solar Panels',
+    category: '',
     imageURL: '',
   });
   const isEditMode = !!id;
@@ -239,19 +239,14 @@ export const AddProduct = () => {
 
             <div className="space-y-2">
               <Label htmlFor="category">Category</Label>
-              <select
+              <Input
                 id="category"
                 name="category"
                 value={formData.category}
                 onChange={handleChange}
-                className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                placeholder="Enter category (e.g., Solar Panels, Inverters)"
                 required
-              >
-                <option value="Solar Panels">Solar Panels</option>
-                <option value="Inverters">Inverters</option>
-                <option value="Batteries">Batteries</option>
-                <option value="Accessories">Accessories</option>
-              </select>
+              />
             </div>
 
             <div className="space-y-2">
