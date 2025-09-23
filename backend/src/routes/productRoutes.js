@@ -1,7 +1,6 @@
 const express = require('express');
 const router = express.Router();
 const Product = require('../models/Product');
-const Review = require('../models/Review');
 const mongoose = require('mongoose');
 
 // List all product IDs
@@ -73,12 +72,30 @@ router.get('/', async (req, res) => {
     
     console.log('Fetching products with query:', query);
     
-    const products = await Product.find(query).sort({ createdAt: -1 });
+    const products = await Product.find(query).sort({ createdAt: -1 }).lean();
     
-    res.json({
-      success: true,
-      data: products,
+    // Process and clean up the product data
+    const processedProducts = products.map(product => {
+      // Convert to plain object if it's a Mongoose document
+      const productObj = product.toObject ? product.toObject() : product;
+      
+      // Return only the fields we want to expose
+      return {
+        id: productObj._id?.toString(),
+        name: productObj.name,
+        price: productObj.price,
+        description: productObj.description,
+        imageURL: productObj.imageURL,
+        category: productObj.category,
+        stock: productObj.stock || 0,
+        averageRating: productObj.averageRating || 0,
+        reviewCount: productObj.reviewCount || 0,
+        rating: productObj.averageRating || 0, // For backward compatibility
+        source: productObj.source || ''
+      };
     });
+    
+    res.json(processedProducts);
   } catch (err) {
     console.error('Error fetching products:', err);
     res.status(500).json({ 
@@ -104,20 +121,23 @@ router.get('/:id', async (req, res) => {
       });
     }
     
-    // Ensure consistent data structure
+    // Format the product response
     const formattedProduct = {
-      ...product,
-      id: product._id.toString(),
-      _id: product._id.toString(),
-      rating: product.averageRating || 0,
-      ratings: product.ratings || []
+      id: product._id?.toString(),
+      name: product.name,
+      price: product.price,
+      description: product.description,
+      imageURL: product.imageURL,
+      category: product.category,
+      stock: product.stock || 0,
+      averageRating: product.averageRating || 0,
+      reviewCount: product.reviewCount || 0,
+      rating: product.averageRating || 0, // For backward compatibility
+      source: product.source || ''
     };
     
     console.log('Returning product:', formattedProduct);
-    res.json({ 
-      success: true, 
-      data: formattedProduct 
-    });
+    res.json(formattedProduct);
     
   } catch (err) {
     console.error('Error fetching product:', {
@@ -250,16 +270,8 @@ router.delete('/:id', async (req, res) => {
     if (!product) {
       return res.status(404).json({ 
         success: false, 
-        message: 'Product not found' 
+        message: 'Product not found'
       });
-    }
-    
-    try {
-      // Delete all reviews associated with this product
-      await Review.deleteMany({ productId: req.params.id });
-    } catch (reviewError) {
-      console.error('Error deleting product reviews:', reviewError);
-      // Continue even if reviews deletion fails
     }
     
     res.json({ 

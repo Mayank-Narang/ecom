@@ -35,7 +35,7 @@ export const AddProduct = () => {
         try {
           const product = await getProductById(id);
           if (product) {
-            const { _id, ratings, averageRating, createdAt, updatedAt, ...rest } = product;
+            const { _id, createdAt, updatedAt, ...rest } = product;
             setFormData(rest);
           }
         } catch (error) {

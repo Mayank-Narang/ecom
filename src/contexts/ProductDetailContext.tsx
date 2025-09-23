@@ -1,27 +1,20 @@
 import { createContext, useContext, useState, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
-import { getProductById, getProductReviews } from '@/services/api';
-import { Product, Review } from '@/data/products';
-
-interface ProductWithRating extends Product {
-  rating?: number;
-}
+import { getProductById } from '@/services/api';
+import { Product } from '@/data/products';
 
 interface ProductDetailContextType {
-  product: ProductWithRating | null;
-  reviews: Review[];
+  product: Product | null;
   loading: boolean;
   error: string | null;
   refreshProduct: () => Promise<void>;
-  refreshReviews: () => Promise<void>;
-  addReview: (review: Omit<Review, 'id' | 'date' | 'sentiment'>) => Promise<void>;
 }
 
 const ProductDetailContext = createContext<ProductDetailContextType | undefined>(undefined);
 
 interface ProductDetailProviderProps {
   children: React.ReactNode;
-  initialProduct?: ProductWithRating | null;
+  initialProduct?: Product | null;
 }
 
 export const ProductDetailProvider: React.FC<ProductDetailProviderProps> = ({ 
@@ -29,8 +22,7 @@ export const ProductDetailProvider: React.FC<ProductDetailProviderProps> = ({
   initialProduct = null 
 }) => {
   const { id } = useParams<{ id: string }>();
-  const [product, setProduct] = useState<ProductWithRating | null>(initialProduct);
-  const [reviews, setReviews] = useState<Review[]>([]);
+  const [product, setProduct] = useState<Product | null>(initialProduct);
   const [loading, setLoading] = useState<boolean>(!initialProduct);
   const [error, setError] = useState<string | null>(null);
 
@@ -68,7 +60,7 @@ export const ProductDetailProvider: React.FC<ProductDetailProviderProps> = ({
         id: data.id || data._id || '', // Ensure id is always defined
       };
       
-      setProduct(formattedProduct as ProductWithRating);
+      setProduct(formattedProduct as Product);
       console.log('Product set in context state');
       
     } catch (err) {
@@ -87,70 +79,25 @@ export const ProductDetailProvider: React.FC<ProductDetailProviderProps> = ({
     }
   };
 
-  const fetchReviews = async () => {
-    if (!id) return;
-    
-    try {
-      const data = await getProductReviews(id);
-      setReviews(data || []);
-    } catch (err) {
-      console.error('Error fetching reviews:', err);
-    }
+  const refreshProduct = async () => {
+    await fetchProduct();
   };
 
   useEffect(() => {
-    if (id) {
+    if (!initialProduct) {
       fetchProduct();
-      fetchReviews();
     }
   }, [id]);
 
-  const addReview = async (reviewData: Omit<Review, 'id' | 'date' | 'sentiment'>) => {
-    if (!id) return;
-    
-    try {
-      const newReview = {
-        ...reviewData,
-        id: `rev_${Date.now()}`,
-        date: new Date().toISOString(),
-        sentiment: {
-          score: 0,
-          comparative: 0,
-          sentiment: 'neutral',
-          positiveWords: [],
-          negativeWords: []
-        }
-      };
-      
-      // In a real app, you would call your API here to add the review
-      // For now, we'll just update the local state
-      setReviews(prev => [...prev, newReview as Review]);
-      
-      // Update the product's average rating
-      if (product) {
-        const allReviews = [...reviews, newReview as Review];
-        const avgRating = allReviews.reduce((sum, r) => sum + r.rating, 0) / allReviews.length;
-        setProduct(prev => ({
-          ...prev!,
-          rating: parseFloat(avgRating.toFixed(1))
-        }));
-      }
-    } catch (err) {
-      console.error('Error adding review:', err);
-      throw err;
-    }
+  const value = {
+    product,
+    loading,
+    error,
+    refreshProduct,
   };
 
   return (
-    <ProductDetailContext.Provider value={{
-      product: product || ({} as Product & { rating?: number }),
-      reviews,
-      loading,
-      error,
-      refreshProduct: fetchProduct,
-      refreshReviews: fetchReviews,
-      addReview,
-    }}>
+    <ProductDetailContext.Provider value={value}>
       {children}
     </ProductDetailContext.Provider>
   );

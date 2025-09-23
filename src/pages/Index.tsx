@@ -48,17 +48,17 @@ const Index = () => {
             Why Choose Our Solar Platform?
           </h2>
           
-          <div className="grid md:grid-3 lg:grid-cols-3 gap-8">
+          <div className="grid md:grid-cols-3 gap-8 mt-12">
             <Card className="text-center hover:shadow-lg transition-all duration-300 border-2 hover:border-primary/30">
               <CardHeader>
-                <div className="mx-auto bg-primary/10 w-16 h-16 rounded-full flex items-center justify-center mb-4">
-                  <Sun className="h-8 w-8 text-primary" />
+                <div className="mx-auto bg-info/10 w-16 h-16 rounded-full flex items-center justify-center mb-4">
+                  <Sun className="h-8 w-8 text-info" />
                 </div>
-                <CardTitle className="text-xl">Premium Solar Products</CardTitle>
+                <CardTitle className="text-xl">Premium Quality</CardTitle>
               </CardHeader>
               <CardContent>
                 <CardDescription>
-                  High-quality solar panels, inverters, batteries, and accessories from trusted manufacturers.
+                  Our solar panels are made with the highest quality materials for maximum efficiency and durability.
                 </CardDescription>
               </CardContent>
             </Card>
@@ -66,27 +66,27 @@ const Index = () => {
             <Card className="text-center hover:shadow-lg transition-all duration-300 border-2 hover:border-primary/30">
               <CardHeader>
                 <div className="mx-auto bg-success/10 w-16 h-16 rounded-full flex items-center justify-center mb-4">
-                  <Zap className="h-8 w-8 text-success" />
+                  <Leaf className="h-8 w-8 text-success" />
                 </div>
-                <CardTitle className="text-xl">Smart Management</CardTitle>
+                <CardTitle className="text-xl">Eco-Friendly</CardTitle>
               </CardHeader>
               <CardContent>
                 <CardDescription>
-                  Advanced monitoring and management tools to optimize your solar energy system performance.
+                  Reduce your carbon footprint with our sustainable energy solutions that are good for the planet.
                 </CardDescription>
               </CardContent>
             </Card>
 
             <Card className="text-center hover:shadow-lg transition-all duration-300 border-2 hover:border-primary/30">
               <CardHeader>
-                <div className="mx-auto bg-info/10 w-16 h-16 rounded-full flex items-center justify-center mb-4">
-                  <BarChart3 className="h-8 w-8 text-info" />
+                <div className="mx-auto bg-warning/10 w-16 h-16 rounded-full flex items-center justify-center mb-4">
+                  <Zap className="h-8 w-8 text-warning" />
                 </div>
-                <CardTitle className="text-xl">Customer Insights</CardTitle>
+                <CardTitle className="text-xl">Fast Installation</CardTitle>
               </CardHeader>
               <CardContent>
                 <CardDescription>
-                  Real-time feedback analysis and sentiment tracking to continuously improve our services.
+                  Our expert team ensures quick and efficient installation with minimal disruption to your daily life.
                 </CardDescription>
               </CardContent>
             </Card>

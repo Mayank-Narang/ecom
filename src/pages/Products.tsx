@@ -4,10 +4,9 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Search, Filter, Loader2 } from 'lucide-react';
-import { formatCurrency } from '@/utils/currency';
+import { Search, Loader2 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
-import { getProducts } from '@/services/api';
+import { getProducts, GetProductsParams } from '@/services/api';
 import { Product } from '@/data/products';
 
 const Products = () => {
@@ -27,24 +26,26 @@ const Products = () => {
       setError(null);
       
       // Only include category in the query if it's not 'All'
-      const categoryParam = selectedCategory !== 'All' ? selectedCategory : '';
+      const categoryParam = selectedCategory !== 'All' ? selectedCategory : undefined;
       
-      const data = await getProducts({
-        search: searchTerm,
-        category: categoryParam
-      });
+      const params: GetProductsParams = {};
+      if (searchTerm) params.search = searchTerm;
+      if (categoryParam) params.category = categoryParam;
+      
+      const data = await getProducts(params);
       
       setProducts(data);
       
       // Update categories list
-      const uniqueCategories = ['All', ...new Set(data.map((p: Product) => p.category))];
-      setCategories(uniqueCategories);
+      const uniqueCategories = ['All', ...new Set(data.map((p) => p.category))];
+      setCategories(uniqueCategories as string[]);
     } catch (err) {
       console.error('Error fetching products:', err);
-      setError('Failed to load products. Please try again later.');
+      const errorMessage = err instanceof Error ? err.message : 'Failed to load products';
+      setError(errorMessage);
       toast({
         title: 'Error',
-        description: 'Failed to load products',
+        description: errorMessage,
         variant: 'destructive',
       });
     } finally {
@@ -190,29 +191,26 @@ const Products = () => {
       {/* Products Grid */}
       {sortedProducts.length > 0 ? (
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6 mt-8">
-          {sortedProducts.map((product) => {
-            const productId = product._id || product.id;
-            return <ProductCard key={productId} product={product} />;
-          })}
-          {sortedProducts.length === 0 && !loading && (
-            <div className="col-span-full text-center py-12">
-              <p className="text-muted-foreground">No products found. Try adjusting your search or filters.</p>
-            </div>
-          )}
+          {sortedProducts.map((product) => (
+            <ProductCard key={product._id || product.id} product={product} />
+          ))}
         </div>
       ) : (
         <div className="text-center py-12">
           <div className="text-muted-foreground text-lg mb-4">
-            No products found matching your criteria.
+            {loading ? 'Loading products...' : 'No products found matching your criteria.'}
           </div>
-          <Button
-            onClick={() => {
-              setSearchTerm('');
-              setSelectedCategory('All');
-            }}
-          >
-            Clear Filters
-          </Button>
+          {(searchTerm || selectedCategory !== 'All') && (
+            <Button
+              onClick={() => {
+                setSearchTerm('');
+                setSelectedCategory('All');
+              }}
+              variant="outline"
+            >
+              Clear Filters
+            </Button>
+          )}
         </div>
       )}
     </div>

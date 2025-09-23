@@ -146,9 +146,6 @@ export const AdminProducts = () => {
                         <h3 className="font-medium">{product.name}</h3>
                         <p className="text-sm text-gray-500">₹{product.price.toLocaleString()}</p>
                         <p className="text-sm text-gray-500">{product.category}</p>
-                        <p className="text-xs text-gray-400">
-                          Rating: {product.averageRating?.toFixed(1) || 'N/A'} ({product.ratings?.length || 0} reviews)
-                        </p>
                       </div>
                     </div>
                     <div className="flex items-center space-x-2">

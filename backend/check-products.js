@@ -31,13 +31,7 @@ async function checkProducts() {
         } catch (err) {
           console.error('\n❌ Validation error for product:', product._id);
           console.error(err.message);
-          // Try to fix the product
-          if (!product.ratings) {
-            console.log('Fixing missing ratings array...');
-            product.ratings = [];
-            await product.save();
-            console.log('✅ Fixed product:', product._id);
-          }
+          console.log('Please fix the product manually');
         }
       }
       console.log('✅ All products validated');

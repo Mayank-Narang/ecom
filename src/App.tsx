@@ -17,7 +17,6 @@ import NotFound from "./pages/NotFound";
 import { AdminLogin } from "./pages/admin/Login";
 import AdminProducts from "./pages/admin/Products";
 import { AddProduct } from "./pages/admin/AddProduct";
-import ProductReviews from "./pages/admin/ProductReviews";
 import { AdminLayout } from "@/components/AdminLayout";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
 
@@ -66,7 +65,6 @@ const AppRoutes = () => {
         <Route path="products" element={<AdminProducts />} />
         <Route path="products/add" element={<AddProduct />} />
         <Route path="products/:id" element={<AddProduct />} />
-        <Route path="products/:id/reviews" element={<ProductReviews />} />
       </Route>
       
       <Route path="/admin/login" element={<AdminLogin />} />

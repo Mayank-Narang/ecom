@@ -1,66 +1,90 @@
-import { useState } from 'react';
-import { Star } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { FaStar, FaRegStar, FaStarHalfAlt } from 'react-icons/fa';
 
 interface StarRatingProps {
   rating: number;
   onRatingChange?: (rating: number) => void;
+  size?: number;
   readonly?: boolean;
-  size?: 'sm' | 'md' | 'lg';
+  className?: string;
 }
 
-export const StarRating: React.FC<StarRatingProps> = ({ 
-  rating, 
-  onRatingChange, 
+const StarRating: React.FC<StarRatingProps> = ({
+  rating,
+  onRatingChange,
+  size = 20,
   readonly = false,
-  size = 'md' 
+  className = '',
 }) => {
-  const [hoveredRating, setHoveredRating] = useState(0);
-  
-  const sizeClasses = {
-    sm: 'h-4 w-4',
-    md: 'h-6 w-6',
-    lg: 'h-8 w-8'
-  };
+  const [hover, setHover] = useState<number | null>(null);
+  const [displayRating, setDisplayRating] = useState(rating);
 
-  const handleClick = (value: number) => {
+  // Update display rating when rating prop changes
+  useEffect(() => {
+    setDisplayRating(rating);
+  }, [rating]);
+
+  const handleClick = (selectedRating: number) => {
     if (!readonly && onRatingChange) {
-      onRatingChange(value);
+      onRatingChange(selectedRating);
     }
   };
 
-  const handleMouseEnter = (value: number) => {
-    if (!readonly) {
-      setHoveredRating(value);
-    }
-  };
+  // Handle half-star ratings for display
+  const renderStar = (index: number) => {
+    const starValue = index + 1;
+    const isHovered = hover !== null && starValue <= hover;
+    const isFilled = starValue <= Math.floor(displayRating);
+    const hasHalfStar = !isFilled && starValue - 0.5 <= displayRating;
 
-  const handleMouseLeave = () => {
-    if (!readonly) {
-      setHoveredRating(0);
-    }
+    const StarIcon = isHovered || isFilled ? FaStar : 
+                     hasHalfStar ? FaStarHalfAlt : FaRegStar;
+    
+    return (
+      <label 
+        key={index} 
+        className={`${!readonly ? 'cursor-pointer' : 'cursor-default'}`}
+        onMouseEnter={() => !readonly && setHover(starValue)}
+        onMouseLeave={() => !readonly && setHover(null)}
+      >
+        <input
+          type="radio"
+          name="rating"
+          value={starValue}
+          onClick={() => handleClick(starValue)}
+          className="sr-only"
+          disabled={readonly}
+          aria-label={`Rate ${starValue} out of 5`}
+        />
+        <StarIcon
+          className="transition-colors duration-200"
+          size={size}
+          color={isHovered || isFilled || hasHalfStar ? '#ffc107' : '#e4e5e9'}
+          onMouseEnter={() => !readonly && setHover(starValue)}
+          onMouseLeave={() => !readonly && setHover(null)}
+        />
+      </label>
+    );
   };
 
   return (
-    <div className="flex items-center space-x-1">
-      {[1, 2, 3, 4, 5].map((value) => {
-        const isFilled = value <= (hoveredRating || rating);
-        
-        return (
-          <Star
-            key={value}
-            className={`${sizeClasses[size]} ${
-              readonly ? 'cursor-default' : 'cursor-pointer'
-            } transition-colors ${
-              isFilled 
-                ? 'fill-warning text-warning' 
-                : 'text-muted-foreground hover:text-warning'
-            }`}
-            onClick={() => handleClick(value)}
-            onMouseEnter={() => handleMouseEnter(value)}
-            onMouseLeave={handleMouseLeave}
-          />
-        );
-      })}
+    <div 
+      className={`flex items-center ${className}`}
+      role="slider"
+      aria-valuenow={displayRating}
+      aria-valuemin={1}
+      aria-valuemax={5}
+      aria-valuetext={`${displayRating} out of 5 stars`}
+      aria-readonly={readonly}
+    >
+      {[0, 1, 2, 3, 4].map(renderStar)}
+      {!readonly && (
+        <span className="ml-2 text-sm text-gray-500">
+          {hover || displayRating || ''} {hover || displayRating ? 'stars' : ''}
+        </span>
+      )}
     </div>
   );
 };
+
+export default StarRating;

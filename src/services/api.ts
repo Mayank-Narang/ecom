@@ -1,6 +1,38 @@
 import axios from 'axios';
 import { Product } from '@/data/products';
 
+export interface Review {
+  _id: string;
+  productId: string;
+  userName: string;
+  rating: number;
+  comment: string;
+  sentiment: {
+    score: number;
+    comparative: number;
+    analysis: 'positive' | 'neutral' | 'negative';
+  };
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface ReviewResponse {
+  success: boolean;
+  data: {
+    reviews: Review[];
+    averageRating: number;
+    totalReviews: number;
+    review?: Review;
+  };
+}
+
+export interface CreateReviewData {
+  productId: string;
+  userName: string;
+  rating: number;
+  comment: string;
+}
+
 const API_BASE_URL = 'http://localhost:5000/api';
 
 const api = axios.create({
@@ -67,14 +99,10 @@ export const getProducts = async (params: GetProductsParams = {}) => {
     const response = await api.get('/products', { params });
     console.log('Products API response:', response.data);
     
-    if (!response.data.success) {
-      throw new Error(response.data.message || 'Failed to fetch products');
-    }
+    // The backend now returns a direct array of products
+    const products = Array.isArray(response.data) ? response.data : [];
     
-    // Ensure we always return an array
-    const products = response.data.data || [];
     console.log(`Fetched ${products.length} products`);
-    
     return products;
   } catch (error: any) {
     console.error('Error in getProducts:', {
@@ -111,17 +139,15 @@ export const getProductById = async (id: string) => {
       throw new Error('Empty response from server');
     }
     
-    if (!response.data.success) {
-      throw new Error(response.data.message || 'Failed to fetch product');
+    // The backend now returns a direct product object
+    const product = response.data;
+    
+    if (!product || !product.id) {
+      throw new Error('Invalid product data received');
     }
     
-    if (!response.data.data) {
-      console.error('No data in response:', response.data);
-      throw new Error('No product data found in response');
-    }
-    
-    console.log('Product data received:', response.data.data);
-    return response.data.data;
+    console.log('Product data received:', product);
+    return product;
   } catch (error: any) {
     console.error(`Error in getProductById:`, {
       message: error.message,
@@ -237,54 +263,40 @@ export const updateProduct = async (id: string, productData: UpdateProductData) 
   }
 };
 
-// Reviews API
-export const getProductReviews = async (productId: string) => {
+/**
+ * Get all reviews for a product
+ */
+export const getProductReviews = async (productId: string): Promise<ReviewResponse> => {
   try {
-    const response = await api.get(`/reviews/product/${productId}`);
-    return response.data.data;
+    const response = await api.get<ReviewResponse>(`/reviews/product/${productId}`);
+    return response.data;
   } catch (error) {
-    console.error(`Error fetching reviews for product ${productId}:`, error);
+    console.error('Error fetching product reviews:', error);
     throw error;
   }
 };
 
-export const addReview = async (productId: string, reviewData: {
-  userId: string;
-  userName: string;
-  rating: number;
-  comment: string;
-}) => {
+/**
+ * Create a new review
+ */
+export const createReview = async (reviewData: CreateReviewData) => {
   try {
-    const response = await api.post(`/reviews/product/${productId}`, reviewData);
-    return response.data.data;
-  } catch (error) {
-    console.error('Error adding review:', error);
-    throw error;
-  }
-};
-
-export const updateReview = async (reviewId: string, reviewData: {
-  rating: number;
-  comment: string;
-  userId: string;
-}) => {
-  try {
-    const response = await api.put(`/reviews/${reviewId}`, reviewData);
-    return response.data.data;
-  } catch (error) {
-    console.error(`Error updating review ${reviewId}:`, error);
-    throw error;
-  }
-};
-
-export const deleteReview = async (reviewId: string, userId: string) => {
-  try {
-    const response = await api.delete(`/reviews/${reviewId}`, {
-      data: { userId },
+    console.log('Submitting review:', reviewData);
+    const response = await api.post('/reviews', {
+      productId: reviewData.productId,
+      userName: reviewData.userName,
+      rating: reviewData.rating,
+      comment: reviewData.comment
     });
-    return response.data.success;
+    console.log('Review submission response:', response.data);
+    return response.data;
   } catch (error) {
-    console.error(`Error deleting review ${reviewId}:`, error);
+    console.error('Error creating review:', {
+      message: error.message,
+      response: error.response?.data,
+      status: error.response?.status,
+      config: error.config,
+    });
     throw error;
   }
 };

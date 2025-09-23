@@ -23,24 +23,20 @@ const productSchema = new mongoose.Schema({
     type: String,
     required: true
   },
-  ratings: [{
-    userId: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: 'User',
-      required: true
-    },
-    rating: {
-      type: Number,
-      required: true,
-      min: 1,
-      max: 5
-    }
-  }],
+  stock: {
+    type: Number,
+    required: true,
+    default: 0
+  },
   averageRating: {
     type: Number,
     default: 0,
     min: 0,
     max: 5
+  },
+  reviewCount: {
+    type: Number,
+    default: 0
   }
 }, {
   timestamps: true,
@@ -48,15 +44,5 @@ const productSchema = new mongoose.Schema({
   toObject: { virtuals: true }
 });
 
-// Calculate average rating before saving
-productSchema.pre('save', function(next) {
-  if (this.ratings.length > 0) {
-    const sum = this.ratings.reduce((acc, item) => acc + item.rating, 0);
-    this.averageRating = sum / this.ratings.length;
-  } else {
-    this.averageRating = 0;
-  }
-  next();
-});
 
 module.exports = mongoose.model('Product', productSchema);

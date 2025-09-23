@@ -1,204 +1,204 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { Button } from '@/components/ui/button';
-import { Star, Sparkles } from 'lucide-react';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
-import { useToast } from '@/hooks/use-toast';
-import { analyzeSentiment, getSentimentEmoji, getSentimentColor } from '@/utils/sentimentAnalysis';
+import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
+import { X, Star } from 'lucide-react';
+import { useToast } from '@/components/ui/use-toast';
 
 interface ReviewFormProps {
-  productId: string;
-  onReviewSubmit: (review: {
-    userId: string;
-    userName: string;
-    rating: number;
-    comment: string;
-  }) => Promise<void>;
-  userId: string;
-  userName: string;
-  onUserNameChange?: (name: string) => void;
+  onSubmit: (data: { userName: string; rating: number; comment: string }) => Promise<void>;
+  onCancel: () => void;
+  isSubmitting?: boolean;
 }
 
-export const ReviewForm = ({ 
-  productId, 
-  onReviewSubmit, 
-  userId, 
-  userName: propUserName, 
-  onUserNameChange 
-}: ReviewFormProps) => {
-  const [rating, setRating] = useState(0);
-  const [comment, setComment] = useState('');
-  const [userName, setUserName] = useState(propUserName || '');
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [sentiment, setSentiment] = useState<{
-    score: number;
-    comparative: number;
-    sentiment: 'positive' | 'negative' | 'neutral';
-    positiveWords: string[];
-    negativeWords: string[];
-  } | null>(null);
+interface FormData {
+  userName: string;
+  comment: string;
+  rating: number;
+}
+
+const ReviewForm: React.FC<ReviewFormProps> = ({ onSubmit, onCancel, isSubmitting = false }) => {
+  const [formData, setFormData] = useState<FormData>({
+    userName: '',
+    comment: '',
+    rating: 0,
+  });
+  const [hoveredRating, setHoveredRating] = useState(0);
+  const [error, setError] = useState('');
+  const [isFormSubmitting, setIsFormSubmitting] = useState(false);
   const { toast } = useToast();
 
-  // Analyze sentiment when comment changes
-  useEffect(() => {
-    if (comment.trim()) {
-      const analysis = analyzeSentiment(comment);
-      setSentiment(analysis);
-    } else {
-      setSentiment(null);
-    }
-  }, [comment]);
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+    const { name, value } = e.target;
+    setFormData(prev => ({
+      ...prev,
+      [name]: value,
+    }));
+  };
+
+  const handleRatingChange = (rating: number) => {
+    setFormData(prev => ({
+      ...prev,
+      rating,
+    }));
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (rating === 0) {
-      toast({
-        title: 'Error',
-        description: 'Please select a rating',
-        variant: 'destructive',
-      });
+    if (!formData.userName.trim() || !formData.comment.trim() || formData.rating === 0) {
+      setError('Please fill in all required fields');
       return;
     }
 
-    if (!comment.trim()) {
-      toast({
-        title: 'Error',
-        description: 'Please enter a comment',
-        variant: 'destructive',
-      });
-      return;
-    }
-
-    if (!userName.trim()) {
-      toast({
-        title: 'Error',
-        description: 'Please enter your name',
-        variant: 'destructive',
-      });
-      return;
-    }
-
-    setIsSubmitting(true);
+    setIsFormSubmitting(true);
+    setError('');
 
     try {
-      await onReviewSubmit({
-        userId,
-        userName: userName.trim(),
-        rating,
-        comment,
+      await onSubmit({
+        userName: formData.userName,
+        rating: formData.rating,
+        comment: formData.comment,
+      });
+
+      // Reset form
+      setFormData({
+        userName: '',
+        comment: '',
+        rating: 0,
       });
       
-      // Show sentiment feedback to user
       toast({
-        title: `Your review is ${sentiment?.sentiment} ${getSentimentEmoji(sentiment?.sentiment || 'neutral')}`,
-        description: sentiment?.positiveWords.length || sentiment?.negativeWords.length 
-          ? `Detected keywords: ${[...(sentiment?.positiveWords || []), ...(sentiment?.negativeWords || [])].join(', ')}`
-          : undefined,
+        title: 'Review submitted',
+        description: 'Thank you for your feedback!',
       });
       
-      // Clear the form
-      setRating(0);
-      setComment('');
-      setSentiment(null);
-    } catch (error) {
-      console.error('Error submitting review:', error);
+      onCancel();
+    } catch (err) {
+      console.error('Error submitting review:', err);
+      setError('Failed to submit review. Please try again.');
       toast({
         title: 'Error',
         description: 'Failed to submit review. Please try again.',
         variant: 'destructive',
       });
     } finally {
-      setIsSubmitting(false);
+      setIsFormSubmitting(false);
     }
   };
 
   return (
-    <div className="mt-8 border-t pt-6">
-      <h3 className="text-lg font-medium mb-4">Write a Review</h3>
-      <form onSubmit={handleSubmit} className="space-y-4">
-        <div>
-          <label htmlFor="userName" className="block text-sm font-medium mb-1">
-            Your Name <span className="text-red-500">*</span>
-          </label>
-          <input
-            type="text"
-            id="userName"
-            value={userName}
-            onChange={(e) => {
-              setUserName(e.target.value);
-              if (onUserNameChange) onUserNameChange(e.target.value);
-            }}
-            placeholder="Your name"
-            className="flex-1 min-w-0 px-3 py-2 border rounded-md shadow-sm focus:ring-primary focus:border-primary"
-            required
-            disabled={!!propUserName}
-          />
+    <Card className="w-full max-w-2xl mx-auto">
+      <CardHeader className="relative pb-2">
+        <div className="flex justify-between items-center">
+          <CardTitle className="text-xl">Write a Review</CardTitle>
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={onCancel}
+            disabled={isFormSubmitting || isSubmitting}
+            className="h-8 w-8"
+          >
+            <X className="h-4 w-4" />
+            <span className="sr-only">Close</span>
+          </Button>
         </div>
-        
-        <div>
-          <label className="block text-sm font-medium mb-1">
-            Rating <span className="text-red-500">*</span>
-          </label>
-          <div className="flex space-x-1">
-            {[1, 2, 3, 4, 5].map((star) => (
-              <button
-                key={star}
-                type="button"
-                onClick={() => setRating(star)}
-                className={`h-8 w-8 flex items-center justify-center rounded-full ${
-                  star <= rating ? 'bg-yellow-100' : 'bg-gray-100'
-                } hover:bg-yellow-50`}
-              >
-                <Star
-                  className={`h-6 w-6 ${
-                    star <= rating ? 'fill-yellow-400 text-yellow-400' : 'text-gray-300'
-                  }`}
-                />
-              </button>
-            ))}
-          </div>
-        </div>
-        
-        <div>
-          <div className="flex justify-between items-center mb-2">
-            <label htmlFor="comment" className="block text-sm font-medium">
-              Your Review <span className="text-red-500">*</span>
-            </label>
-            {sentiment && (
-              <div className={`flex items-center text-sm ${getSentimentColor(sentiment.sentiment)}`}>
-                <Sparkles className="h-3.5 w-3.5 mr-1" />
-                <span className="capitalize">
-                  {sentiment.sentiment} {getSentimentEmoji(sentiment.sentiment)}
-                </span>
-              </div>
-            )}
-          </div>
-          <Textarea
-            id="comment"
-            value={comment}
-            onChange={(e) => setComment(e.target.value)}
-            rows={4}
-            placeholder="Share your thoughts about this product..."
-            className="w-full"
-            disabled={isSubmitting}
-          />
-          {sentiment && (sentiment.positiveWords.length > 0 || sentiment.negativeWords.length > 0) && (
-            <div className="mt-2 text-xs text-muted-foreground">
-              Detected: 
-              {sentiment.positiveWords.map(word => (
-                <span key={`pos-${word}`} className="text-green-500 ml-1">{word}</span>
-              ))}
-              {sentiment.negativeWords.map(word => (
-                <span key={`neg-${word}`} className="text-red-500 ml-1">{word}</span>
-              ))}
+      </CardHeader>
+      
+      <form onSubmit={handleSubmit}>
+        <CardContent className="space-y-6">
+          {error && (
+            <div className="p-3 text-sm text-destructive bg-destructive/10 rounded-md">
+              {error}
             </div>
           )}
-        </div>
+          
+          <div className="space-y-2">
+            <Label htmlFor="userName">
+              Your Name <span className="text-destructive">*</span>
+            </Label>
+            <Input
+              id="userName"
+              name="userName"
+              value={formData.userName}
+              onChange={handleInputChange}
+              placeholder="Enter your name"
+              disabled={isFormSubmitting || isSubmitting}
+              required
+            />
+          </div>
+          
+          <div className="space-y-2">
+            <Label>
+              Your Rating <span className="text-destructive">*</span>
+            </Label>
+            <div className="flex items-center space-x-1">
+              {[1, 2, 3, 4, 5].map((star) => (
+                <button
+                  key={star}
+                  type="button"
+                  onClick={() => handleRatingChange(star)}
+                  onMouseEnter={() => setHoveredRating(star)}
+                  onMouseLeave={() => setHoveredRating(0)}
+                  disabled={isFormSubmitting || isSubmitting}
+                  className="p-1 focus:outline-none"
+                  aria-label={`Rate ${star} star${star !== 1 ? 's' : ''}`}
+                >
+                  <Star
+                    className={`h-6 w-6 ${
+                      (hoveredRating || formData.rating) >= star
+                        ? 'fill-primary text-primary'
+                        : 'text-muted-foreground'
+                    }`}
+                  />
+                </button>
+              ))}
+              <span className="ml-2 text-sm text-muted-foreground">
+                {formData.rating > 0
+                  ? `${formData.rating} star${formData.rating > 1 ? 's' : ''}`
+                  : 'Select rating'}
+              </span>
+            </div>
+          </div>
+          
+          <div className="space-y-2">
+            <Label htmlFor="comment">
+              Your Review <span className="text-destructive">*</span>
+            </Label>
+            <Textarea
+              id="comment"
+              name="comment"
+              value={formData.comment}
+              onChange={handleInputChange}
+              placeholder="Share your thoughts about this product..."
+              className="min-h-[120px]"
+              disabled={isFormSubmitting || isSubmitting}
+              required
+            />
+          </div>
+        </CardContent>
         
-        <Button type="submit" disabled={isSubmitting}>
-          {isSubmitting ? 'Submitting...' : 'Submit Review'}
-        </Button>
+        <CardFooter className="flex justify-end space-x-2 pt-4">
+          <Button
+            type="button"
+            variant="outline"
+            onClick={onCancel}
+            disabled={isFormSubmitting || isSubmitting}
+          >
+            Cancel
+          </Button>
+          <Button
+            type="submit"
+            disabled={isFormSubmitting || isSubmitting}
+          >
+            {isFormSubmitting || isSubmitting ? 'Submitting...' : 'Submit Review'}
+          </Button>
+        </CardFooter>
       </form>
-    </div>
+    </Card>
   );
 };
+
+export default ReviewForm;

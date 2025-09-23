@@ -24,10 +24,13 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
     });
   };
 
+  // Use _id as the primary identifier, fall back to id if _id is not available
+  const productId = product._id || product.id;
+  
   return (
     <Card className="group hover:shadow-lg transition-all duration-300 hover:scale-105 border-2 hover:border-primary/30 h-full flex flex-col">
       <Link 
-        to={`/products/${product.id}`}
+        to={`/products/${productId}`}
         state={{ product }} // Pass the entire product object in the state
         className="block flex-1 flex flex-col"
       >

@@ -6,12 +6,15 @@ export interface Product {
   price: number;
   description: string;
   imageURL: string;
+  image?: string; // For backward compatibility
   category: string;
+  stock?: number;
   rating?: number;
-  numReviews?: number;
+  reviewCount?: number;
+  averageRating?: number;
 }
 
-export interface CartItem extends Product {
+export interface CartItem extends Omit<Product, 'stock' | 'rating' | 'reviewCount' | 'averageRating'> {
   quantity: number;
 }
 
@@ -63,14 +66,29 @@ export const CartProvider: React.FC<CartProviderProps> = ({ children }) => {
         );
       }
       
-      // Ensure we're using the correct ID field
-      const productToAdd = { ...product };
+      // Ensure we're using the correct ID and image fields
+      const productToAdd = { 
+        ...product,
+        // Use imageURL if available, otherwise fall back to image
+        imageURL: product.imageURL || (product as any).image || ''
+      };
+      
       if ((product as any)._id && !product.id) {
         productToAdd.id = (product as any)._id;
         delete (productToAdd as any)._id;
       }
       
-      return [...currentItems, { ...productToAdd, quantity: 1 }];
+      // Only include the properties we need in the cart
+      const { id, name, price, description, imageURL, category } = productToAdd;
+      return [...currentItems, { 
+        id, 
+        name, 
+        price, 
+        description, 
+        imageURL, 
+        category, 
+        quantity: 1 
+      }];
     });
   }, []);
 
