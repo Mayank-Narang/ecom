@@ -6,7 +6,7 @@ import { ProductProvider } from "@/contexts/ProductContext";
 import { ProductDetailProvider } from "@/contexts/ProductDetailContext";
 import { BrowserRouter, Routes, Route, Navigate, useLocation } from "react-router-dom";
 import { CartProvider } from "@/contexts/CartContext";
-import { AuthProvider, useAuth } from "@/contexts/AuthContext";
+import { AuthProvider } from "@/contexts/AuthContext";
 import { WishlistProvider } from "@/contexts/WishlistContext";
 import { Navbar } from "@/components/Navbar";
 import Index from "./pages/Index";

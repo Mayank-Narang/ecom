@@ -3,7 +3,7 @@ import { useEffect, useState, useCallback } from 'react';
 import { getProductById, getProductReviews, createReview, Review } from '@/services/api';
 import { Button } from "@/components/ui/button";
 import { useCart } from "@/contexts/CartContext";
-import { ShoppingCart, ArrowLeft, Loader2, Star, MessageSquare } from "lucide-react";
+import { ShoppingCart, ArrowLeft, Loader2 } from "lucide-react";
 import { formatCurrency } from "@/utils/currency";
 import { useToast } from "@/hooks/use-toast";
 import { Product } from "@/data/products";
